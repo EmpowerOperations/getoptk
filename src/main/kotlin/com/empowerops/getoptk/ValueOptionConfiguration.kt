@@ -43,6 +43,10 @@ class ValueOptionConfiguration<T: Any>(source: CLI, optionType: KClass<T>)
     }
 
     override fun reduce(tokens: List<Token>): List<Token> {
+
+        //TODO: a combinator here gives us:
+        // 1. a more slick grammar
+        // 2. better error reporting --maybe return Either<ErrorMessage, List<Token>>?
         if(tokens[0] is OptionPreambleToken
                 && tokens[1].let { it is OptionName && it.text in names }
                 && tokens[2].let { it is SuperTokenSeparator }
