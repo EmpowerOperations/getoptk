@@ -56,9 +56,13 @@ class ValueOptionConfiguration<T: Any>(source: CLI, optionType: KClass<T>)
             _value = converter.convert(marked().filterIsInstance<Argument>().single().text)
             initialized = true
 
+            println("reduced to size = ${rest().size}")
             return rest()
         }
-        else return tokens
+        else {
+            println("failed to reduce")
+            return tokens
+        }
     }
 }
 

@@ -2,12 +2,9 @@ package com.empowerops.getoptk
 
 object Lexer {
 
-    var tokens: List<Token> = emptyList()
-    var currentStack: List<Char> = emptyList()
-
-    val regex = "".toRegex()
-
     fun lex(superTokens: Iterable<String>): List<Token>{
+
+        var tokens: List<Token> = emptyList()
 
         for(superToken in superTokens){
 
@@ -32,9 +29,9 @@ object Lexer {
 
 interface Token
 interface OptionPreambleToken: Token
-object SuperTokenSeparator: Token
-object ShortPreamble: OptionPreambleToken { val Lexeme = "-" }
-object LongPreamble: OptionPreambleToken { val Lexeme = "--" }
-object WindowsPreamble: OptionPreambleToken { val Lexeme = "/" }
+object SuperTokenSeparator: Token { override fun toString() = "[separator]"}
+object ShortPreamble: OptionPreambleToken { val Lexeme = "-"; override fun toString() = "[preamble -]"}
+object LongPreamble: OptionPreambleToken { val Lexeme = "--"; override fun toString() = "[preamble --]" }
+object WindowsPreamble: OptionPreambleToken { val Lexeme = "/"; override fun toString() = "[preamble /]" }
 data class OptionName(val text: String): Token
 data class Argument(val text: String): Token

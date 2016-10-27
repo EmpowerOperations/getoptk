@@ -17,7 +17,7 @@ object Parser {
         tokens = root.reduce(tokens)
 
         if (tokens.any()){
-            TODO("tokens werent consumed!")
+            TODO("tokens werent consumed: $tokens")
         }
 
         //also recovery from fixed-point convergence on non-empty tokens

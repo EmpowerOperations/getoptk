@@ -15,6 +15,7 @@ internal class AggregateCombinator(val componentCombinators: List<OptionCombinat
         var currentTokens = tokens
 
         do {
+            println("iterating once")
             val oldTokens = currentTokens
             currentTokens = componentCombinators.fold(tokens) { remaining, opt -> opt.reduce(remaining) }
         }
