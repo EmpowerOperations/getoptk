@@ -7,10 +7,15 @@ import kotlin.reflect.KClass
 // Could just as easily return a T instead of a (String) -> T
 object Parsers {
     fun <T : Any> getDefaultFor(type: KClass<T>): (String) -> T = when(type){
-        String::class -> { it -> type.cast(it) }
+        String::class -> type.wrap { it }
+        Int::class -> type.wrap(String::toInt)
+        Long::class -> type.wrap(String::toLong)
+        Char::class -> type.wrap { require(it.length == 1); it[0] }
         else -> TODO()
     }
 
+    //for the record: no functional programmer worth his salt would call this "nice"
 
-    fun <T: Any> KClass<T>.cast(instance: Any) = java.cast(instance)
+    fun <T: Any> KClass<T>.wrap(parser: (String) -> Any): (String) -> T
+            = { it: String -> try { this.java.cast(parser(it)) } catch(e: Exception) { TODO() } }
 }

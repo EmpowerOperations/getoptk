@@ -12,8 +12,31 @@ import kotlin.reflect.KProperty
 // in this sense I figured it was easier to simply require the object to have a `getArgs`
 // than use some kind of reflective set call or factory or anything else.
 interface CLI {
-    val args: Array<String>
+
+    companion object {
+
+        fun <T: CLI> parse(args: Array<String>, hostFactory: () -> T): T {
+
+            val (opts, result) = captureRegisteredOpts(hostFactory)
+
+            val ast = buildAST(args, opts)
+            ast.walk(OptionUpdatingWalker(opts))
+
+            return result;
+        }
+
+        internal fun <T> captureRegisteredOpts(hostFactory: () -> T): Pair<List<CommandLineOption<*>>, T>{
+            TODO()
+        }
+
+        internal fun buildAST(args: Array<String>, opts: List<CommandLineOption<*>>):Nothing = TODO()
+
+
+    }
 }
+
+fun <T: CLI> Array<String>.parsedAs(hostFactory: () -> T): T = CLI.parse(this, hostFactory)
+
 
 // this is really a marker interface, I put these members on it because I could,
 // but really it only exists for the implementation detail mentioned blow about `Map<CLI,
@@ -43,7 +66,6 @@ interface ParseMode {
 }
 
 
-// library-user facing. Idomatic use included in CLIClient.kt
 inline fun <reified T: Any> CLI.getOpt(noinline spec: ValueOptionConfiguration<T>.() -> Unit = {}): ValueOptionConfiguration<T>
         = getOpt(this, spec, T::class)
 

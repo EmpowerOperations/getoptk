@@ -28,19 +28,16 @@ class ValueOptionConfiguration<T: Any>(source: CLI, optionType: KClass<T>
     // in this example you would change airty to '2'.
     var arity: Int = 1
 
-    operator fun getValue(self: CLI, property: KProperty<*>): T = parser(Finder.find(self, property, names))
+    internal var initialized = false
+    internal var _value: T? = null
+
+    operator fun getValue(self: CLI, property: KProperty<*>): T{
+        require(initialized) { "TODO: nice error message" }
+        return _value!! //uhh, how do I make this nullable iff user specified T as "String?" or some such?
+    }
 }
 
 internal object Finder{
-
-    fun find(self: CLI, property: KProperty<*>, names: List<String>): String {
-
-        val names = buildNames(property, names)
-
-        val indexOfName = names.map { self.args.indexOf(it) }.filter { it != -1 }.firstOrNull() ?: TODO()
-
-        return self.args[indexOfName + 1]
-    }
 
     private fun buildNames(property: KProperty<*>, names: List<String>): List<String> = when {
         names.any() -> names

@@ -10,16 +10,17 @@ class UsageExample {
 
     @Test fun `when using usage example created initially should parse properly`(){
         //setup
-        val instance = SimpleImpl(arrayOf("--helloString", "Hello_getoptk!"))
+        val args = arrayOf("--helloString", "Hello_getoptk!")
 
         //act
+        val instance = args.parsedAs { SimpleImpl() }
         val result = instance.helloString
 
         //assert
         assertThat(result).isEqualTo("Hello_getoptk!")
     }
 
-    class SimpleImpl(override val args: Array<String>) : CLI {
+    class SimpleImpl() : CLI {
         val helloString: String by getOpt {}
     }
 
