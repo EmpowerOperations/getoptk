@@ -3,12 +3,13 @@ package com.empowerops.getoptk
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 
-class ValueOptionConfiguration<T: Any>(source: CLI, optionType: KClass<T>
-) : CommandLineOption<T> {
+class ValueOptionConfiguration<T: Any>(source: CLI, optionType: KClass<T>)
+: CommandLineOption<T>, ReflectivelyInitialized {
 
     init { RegisteredOptions.optionProperties += source to this }
 
-    // Indicates the strategy to convert the "arg" in --opt arg into a T, defaults to things like "Double.ParseDouble" etc.
+    // Indicates the strategy to convert the "arg" in --opt arg into a T,
+    // defaults to things like "Double.ParseDouble" etc.
     // problem: multiple arity should bump this from a Funcion1 to a Funcion2 (ie `(String, String) -> T`).
     // How to do this elegantly?
     var parser: (String) -> T = Parsers.getDefaultFor(optionType)
@@ -31,17 +32,28 @@ class ValueOptionConfiguration<T: Any>(source: CLI, optionType: KClass<T>
     internal var initialized = false
     internal var _value: T? = null
 
-    operator fun getValue(self: CLI, property: KProperty<*>): T{
+    override operator fun getValue(thisRef: CLI, property: KProperty<*>): T{
         require(initialized) { "TODO: nice error message" }
         return _value!! //uhh, how do I make this nullable iff user specified T as "String?" or some such?
     }
-}
 
-internal object Finder{
+    override fun finalizeInit(hostingProperty: KProperty<*>) {
+        if(description == "") description = Inferred.generateInferredDescription(hostingProperty)
+        if(names === CommandLineOption.INFER_NAMES) names = Inferred.generateInferredNames(hostingProperty)
+    }
 
-    private fun buildNames(property: KProperty<*>, names: List<String>): List<String> = when {
-        names.any() -> names
-        names === CommandLineOption.INFER_NAMES -> listOf("--${property.name}", "-${property.name[0]}")
-        else -> TODO()
+    override fun reduce(tokens: List<Token>): List<Token> {
+        if(tokens[0] is OptionPreambleToken
+                && tokens[1].let { it is OptionName && it.text in names }
+                && tokens[2].let { it is SuperTokenSeparator }
+                && tokens[3].let { it is Argument }
+                && tokens[4].let { it is SuperTokenSeparator }){
+
+            _value = parser((tokens[3] as Argument).text)
+            initialized = true
+
+            return tokens.subList(5, tokens.size)
+        }
+        else return tokens
     }
 }

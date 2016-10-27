@@ -1,7 +1,12 @@
 package com.empowerops.getoptk
 
+import com.google.common.collect.HashMultimap
+import com.google.common.collect.Multimap
+import kotlin.properties.ReadOnlyProperty
+import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
+import kotlin.reflect.jvm.javaField
 
 /**
  * Created by Geoff on 2016-10-26.
@@ -19,18 +24,43 @@ interface CLI {
 
             val (opts, result) = captureRegisteredOpts(hostFactory)
 
-            val ast = buildAST(args, opts)
-            ast.walk(OptionUpdatingWalker(opts))
+//            val ast = ANTLR.buildAST(args, opts)
+//            ast.walk(OptionUpdatingWalker(opts))
+
+//            CakeParser.buildAST(args, opts)
+
+            val tokens = Lexer.lex(args.asIterable())
+//            val parsedOpts = parse(tokens, opts)
+
+            val newTokens = (opts.first() as ReflectivelyInitialized).reduce(tokens)
 
             return result;
         }
 
-        internal fun <T> captureRegisteredOpts(hostFactory: () -> T): Pair<List<CommandLineOption<*>>, T>{
-            TODO()
+        internal fun lex(args: Array<String>){
+
         }
 
-        internal fun buildAST(args: Array<String>, opts: List<CommandLineOption<*>>):Nothing = TODO()
+        internal fun <T: CLI> captureRegisteredOpts(hostFactory: () -> T): Pair<List<CommandLineOption<*>>, T>{
+            RegisteredOptions.optionProperties = HashMultimap.create()
+            val result = hostFactory()
 
+            val members = result.javaClass.kotlin.members.filterIsInstance<KProperty<*>>()
+            val registeredOptions = RegisteredOptions.optionProperties[result]!!
+
+            //TODO: sort to allow deterministic hierarchy of duplicate-avoidance scheme
+            // in other words, if you have two properties that both start with 'h', what does -h mean?
+            // well the alphabetically-first one gets -h, the second gets -hwhatevs
+            for(registered in registeredOptions){
+
+                //hmm, seems like there is no way to avoid SecurityExceptions if we want parsing to be eager
+                // in other words, its probably a better idea to stick to the lazy parsing idea...
+                val matchingProp = members.single { it.javaField?.apply { isAccessible = true }?.get(result) == registered }
+                registered.finalizeInit(matchingProp)
+            }
+
+            return registeredOptions.map { it as CommandLineOption<*> } to result
+        }
 
     }
 }
@@ -40,7 +70,7 @@ fun <T: CLI> Array<String>.parsedAs(hostFactory: () -> T): T = CLI.parse(this, h
 
 // this is really a marker interface, I put these members on it because I could,
 // but really it only exists for the implementation detail mentioned blow about `Map<CLI,
-interface CommandLineOption<T: Any> {
+interface CommandLineOption<out T: Any>: ReadOnlyProperty<CLI, T> {
     val description: String
     val names: List<String>
 
@@ -50,6 +80,11 @@ interface CommandLineOption<T: Any> {
     // though, it means its easier to introduce breaking changes.
     // (ie, after a user renames "sigma" to "alpha", a script with `prog --sigma` wont work)
     object INFER_NAMES: List<Nothing> by emptyList()
+}
+
+internal interface ReflectivelyInitialized {
+    fun finalizeInit(hostingProperty: KProperty<*>)
+    fun reduce(tokens: List<Token>): List<Token>
 }
 
 interface ParseMode {
@@ -89,5 +124,8 @@ internal object RegisteredOptions {
     //to solve thread-safety... some kind of atomically updating map? += on immutable maps probably wont do it.
     // also, should be a WeakHashMap or Map<WeakReference<CLI..., probably.
     // attempting to maintain that nice eager parsing property when KProperty is lazy is going to result in some odd code.
-    var optionProperties: Map<CLI, CommandLineOption<*>> = emptyMap()
+    var optionProperties: Multimap<CLI, ReflectivelyInitialized> = HashMultimap.create()
 }
+
+
+operator fun <K, V> Multimap<K, V>.plusAssign(pair: Pair<K, V>) { this.put(pair.first, pair.second) }

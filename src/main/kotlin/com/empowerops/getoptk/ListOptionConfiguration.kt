@@ -4,8 +4,7 @@ import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 
 class ListOptionConfiguration<T: List<*>>(source: CLI, optionType: KClass<T>)
-
-: CommandLineOption<T> {
+: CommandLineOption<T>, ReflectivelyInitialized {
 
     init { RegisteredOptions.optionProperties += source to this }
 
@@ -22,7 +21,16 @@ class ListOptionConfiguration<T: List<*>>(source: CLI, optionType: KClass<T>)
 
     var parseMode: ParseMode = ParseMode.CSV
 
-    operator fun getValue(self: CLI, property: KProperty<*>): T {
+    override operator fun getValue(thisRef: CLI, property: KProperty<*>): T {
+        TODO()
+    }
+
+    override fun finalizeInit(hostingProperty: KProperty<*>) {
+        if(description == "") description = Inferred.generateInferredDescription(hostingProperty)
+        if(names === CommandLineOption.INFER_NAMES) names = Inferred.generateInferredNames(hostingProperty)
+    }
+
+    override fun reduce(tokens: List<Token>): List<Token> {
         TODO()
     }
 
