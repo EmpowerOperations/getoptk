@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/getoptk.iml" filepath="$PROJECT_DIR$/.idea/modules/getoptk.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/getoptk_main.iml" filepath="$PROJECT_DIR$/.idea/modules/getoptk_main.iml" group="getoptk" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/getoptk_test.iml" filepath="$PROJECT_DIR$/.idea/modules/getoptk_test.iml" group="getoptk" />
+    </modules>
+  </component>
+</project>
