@@ -1,7 +1,5 @@
 package com.empowerops.getoptk
 
-import com.empowerops.getoptk._sample.CLI
-import com.empowerops.getoptk._sample.getOpt
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
@@ -12,18 +10,17 @@ class UsageExample {
 
     @Test fun `when using usage example created initially should parse properly`(){
         //setup
-        val instance = SimpleImpl(arrayOf("--complexThing", "Hello_getoptk!"))
+        val instance = SimpleImpl(arrayOf("--helloString", "Hello_getoptk!"))
 
         //act
-        val result = instance.complexThing
+        val result = instance.helloString
 
         //assert
         assertThat(result).isEqualTo("Hello_getoptk!")
     }
 
     class SimpleImpl(override val args: Array<String>) : CLI {
-
-        val complexThing: String by getOpt {}
+        val helloString: String by getOpt {}
     }
 
 }

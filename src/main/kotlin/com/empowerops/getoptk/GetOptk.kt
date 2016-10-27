@@ -29,82 +29,6 @@ interface CommandLineOption<T: Any> {
     object INFER_NAMES: List<Nothing> by emptyList()
 }
 
-
-//note: the three below classes could almost certainly be combined polymorphically to reduce the number of "duplicate"
-// fields, but my core principal here is "ctrl + click"able-ness.
-// If i have to repeat some documentation and some `var` statements, so be it.
-
-class ValueCommandLineOption<T: Any>(source: CLI, optionType: KClass<T>
-) : CommandLineOption<T> {
-
-    init { RegisteredOptions.optionProperties += source to this }
-
-    // Indicates the strategy to convert the "arg" in --opt arg into a T, defaults to things like "Double.ParseDouble" etc.
-    // problem: multiple arity should bump this from a Funcion1 to a Funcion2 (ie `(String, String) -> T`).
-    // How to do this elegantly?
-    var parser: (String) -> T = Parsers.getDefaultFor(optionType)
-
-    //description to be supplied by a --help
-    override var description: String = ""
-
-    //aliases that you can use to indicate this param at the command line
-    // if you had 'var bigness: Double by getOpt { names = listOf("-b", "--big", "--BN") }
-    // then you could write "yourProgram --big 4.0" or "yourProgram --BN 4.5"
-    // problem: how to tolerate windows style (ie yourProgram.exe /big 4.0)?
-    override var names: List<String> = CommandLineOption.INFER_NAMES
-
-    //defines the number of values at the command line this thing has associated with it
-    //for example, if you had a field that was `val thing: Pair<String, Double> by getOpt { arity = 2 }`
-    // what you would probably want is for --thing "key" 4.567 to produce `thing == Pair("Key", 4.567)`
-    // in this example you would change airty to '2'.
-    var arity: Int = 1
-
-    operator fun getValue(self: CLI, property: KProperty<*>): T {
-        TODO()
-    }
-
-}
-
-class ListCommandLineOption<T: List<*>>(source: CLI, optionType: KClass<T>)
-
-: CommandLineOption<T> {
-
-    init { RegisteredOptions.optionProperties += source to this }
-
-    //name change to avoid confusion, user might want a "parse the whole value as a list"
-    var elementParser: (String) -> T = Parsers.getDefaultFor(optionType)
-
-    override var description: String = ""
-    override var names: List<String> = CommandLineOption.INFER_NAMES
-
-    //can this always be inferred?
-    //should we support `prog --list 1 2 3` as being varags for a list with 3 elements?
-    //what if you want a list of multi-arity (the obvious example being a map) then you get --list "hello" 1 "world" 2.
-    var arity: Int = 1
-
-    var parseMode: ParseMode = ParseMode.CSV
-
-    operator fun getValue(self: CLI, property: KProperty<*>): T {
-        TODO()
-    }
-
-}
-
-class BooleanCommandLineOption(source: CLI): CommandLineOption<Boolean> {
-
-    init { RegisteredOptions.optionProperties += source to this }
-
-    override var description: String = ""
-
-    //problem: how do we express "compact" form (eg tar -xfvj)?
-    override var names: List<String> = CommandLineOption.INFER_NAMES
-
-    // problem: worth allowing a user to specify a custom parsing mode?
-    // dont think so.
-
-    operator fun getValue(self: CLI, property: KProperty<*>): Boolean = TODO();
-}
-
 interface ParseMode {
 
     companion object {
@@ -120,10 +44,19 @@ interface ParseMode {
 
 
 // library-user facing. Idomatic use included in CLIClient.kt
-fun <T: Any> CLI.getOpt(spec: ValueCommandLineOption<T>.() -> Unit = {}): ValueCommandLineOption<T> = TODO()
+inline fun <reified T: Any> CLI.getOpt(noinline spec: ValueOptionConfiguration<T>.() -> Unit = {}): ValueOptionConfiguration<T>
+        = getOpt(this, spec, T::class)
 
-fun CLI.getFlagOpt(spec: BooleanCommandLineOption.() -> Unit = {}): BooleanCommandLineOption = TODO()
-fun <E, T: List<E>> CLI.getListOpt(spec: ListCommandLineOption<T>.() -> Unit = {}): ListCommandLineOption<T> = TODO()
+fun <T: Any> getOpt(cli: CLI, spec: ValueOptionConfiguration<T>.() -> Unit, type: KClass<T>): ValueOptionConfiguration<T> {
+    val optionConfig = ValueOptionConfiguration(cli, type)
+
+    spec(optionConfig)
+
+    return optionConfig
+}
+
+fun CLI.getFlagOpt(spec: BooleanOptionConfiguration.() -> Unit = {}): BooleanOptionConfiguration = TODO()
+fun <E, T: List<E>> CLI.getListOpt(spec: ListOptionConfiguration<T>.() -> Unit = {}): ListOptionConfiguration<T> = TODO()
 
 // this is an implementation detail, but basically if we want "eager" parsing of the CLI
 // --which we need if we want to do context sensitive parsing
@@ -136,10 +69,3 @@ internal object RegisteredOptions {
     // attempting to maintain that nice eager parsing property when KProperty is lazy is going to result in some odd code.
     var optionProperties: Map<CLI, CommandLineOption<*>> = emptyMap()
 }
-//looks up strategies to convert strings to T's, eg "Double.parseDouble", "Boolean.parseBoolean", etc.
-// please note this object returns a closed parser, which might be weird
-// Could just as easily return a T instead of a (String) -> T
-object Parsers {
-    fun <T: Any> getDefaultFor(type: KClass<T>): (String) -> T = TODO()
-}
-
