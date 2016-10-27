@@ -173,7 +173,7 @@ internal object RegisteredOptions {
 }
 
 //looks up strategies to convert strings to T's, eg "Double.parseDouble", "Boolean.parseBoolean", etc.
-// please note this object returns a closed parser, which might be weird
+// please note this object returns a closed converter, which might be weird
 // Could just as easily return a T instead of a (String) -> T
 object Parsers {
     fun <T : Any> getDefaultFor(type: KClass<T>): (String) -> T = TODO()

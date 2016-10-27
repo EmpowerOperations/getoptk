@@ -7,7 +7,7 @@ import org.junit.Test
  */
 class CakeParserDriver {
 
-//    @Test fun `when using cake parser`(){
+//    @Test fun `when using cake converter`(){
 //
 //        val r = CakeParser.buildAST(emptyArray(), emptyList())
 //

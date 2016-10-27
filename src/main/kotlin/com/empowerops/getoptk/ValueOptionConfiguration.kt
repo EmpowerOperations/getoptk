@@ -4,7 +4,7 @@ import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 
 class ValueOptionConfiguration<T: Any>(source: CLI, optionType: KClass<T>)
-: CommandLineOption<T>, ReflectivelyInitialized {
+: CommandLineOption<T>, OptionCombinator {
 
     init { RegisteredOptions.optionProperties += source to this }
 
@@ -12,7 +12,7 @@ class ValueOptionConfiguration<T: Any>(source: CLI, optionType: KClass<T>)
     // defaults to things like "Double.ParseDouble" etc.
     // problem: multiple arity should bump this from a Funcion1 to a Funcion2 (ie `(String, String) -> T`).
     // How to do this elegantly?
-    var parser: (String) -> T = Parsers.getDefaultFor(optionType)
+    var converter: Converter<T> = Converters.getDefaultFor(optionType)
 
     //description to be supplied by a --help
     override var description: String = ""
@@ -42,22 +42,39 @@ class ValueOptionConfiguration<T: Any>(source: CLI, optionType: KClass<T>)
         if(names === CommandLineOption.INFER_NAMES) names = Inferred.generateInferredNames(hostingProperty)
     }
 
-    override fun reduce(tokens: List<Token>): List<Token> {
+    override fun reduce(tokens: List<Token>): List<Token> = with(Marker(tokens)){
 
-        //TODO: a combinator here gives us:
+        //TODO: a (proper) combinator here would give us:
         // 1. a more slick grammar
         // 2. better error reporting --maybe return Either<ErrorMessage, List<Token>>?
-        if(tokens[0] is OptionPreambleToken
-                && tokens[1].let { it is OptionName && it.text in names }
-                && tokens[2].let { it is SuperTokenSeparator }
-                && tokens[3].let { it is Argument }
-                && tokens[4].let { it is SuperTokenSeparator }){
+        if(next<OptionPreambleToken>()
+                && next<OptionName> { it.text in names }
+                && next<SuperTokenSeparator>()
+                && next<Argument>()
+                && next<SuperTokenSeparator>()){
 
-            _value = parser((tokens[3] as Argument).text)
+            _value = converter.convert(marked().filterIsInstance<Argument>().single().text)
             initialized = true
 
-            return tokens.subList(5, tokens.size)
+            return rest()
         }
         else return tokens
     }
+}
+
+class Marker(val tokens: List<Token>){
+
+    var index = 0;
+    val iterator = tokens.iterator()
+
+    fun next(): Token{
+        index += 1
+        return iterator.next()
+    }
+
+    inline fun <reified T: Token> next(noinline condition: (T) -> Boolean = { true })
+            = (next() as? T)?.run(condition) ?: false
+
+    fun marked(): List<Token> = tokens.subList(0, (index+1).coerceAtMost(tokens.size))
+    fun rest(): List<Token> = tokens.subList(index, tokens.size)
 }

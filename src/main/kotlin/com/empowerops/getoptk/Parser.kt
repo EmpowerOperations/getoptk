@@ -4,25 +4,21 @@ import com.google.common.collect.HashMultimap
 import kotlin.reflect.KProperty
 import kotlin.reflect.jvm.javaField
 
-object FrontEndParser {
+object Parser {
 
     fun <T : CLI> parse(args: Array<String>, hostFactory: () -> T): T {
 
         val (opts, result) = captureRegisteredOpts(hostFactory)
 
-//            val ast = ANTLR.buildAST(args, opts)
-//            ast.walk(OptionUpdatingWalker(opts))
-
-//            CakeParser.buildAST(args, opts)
-
         var tokens = Lexer.lex(args.asIterable())
-//            val parsedOpts = parse(tokens, opts)
 
         val root = AggregateCombinator(opts)
 
         tokens = root.reduce(tokens)
 
-        if (tokens.any()) TODO("tokens werent consumed!")
+        if (tokens.any()){
+            TODO("tokens werent consumed!")
+        }
 
         //also recovery from fixed-point convergence on non-empty tokens
         // (IE: there are unconsumed things in the args list)

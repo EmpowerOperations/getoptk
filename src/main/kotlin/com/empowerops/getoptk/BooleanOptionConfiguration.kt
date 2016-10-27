@@ -2,7 +2,7 @@ package com.empowerops.getoptk
 
 import kotlin.reflect.KProperty
 
-class BooleanOptionConfiguration(source: CLI): CommandLineOption<Boolean>, ReflectivelyInitialized {
+class BooleanOptionConfiguration(source: CLI): CommandLineOption<Boolean>, OptionCombinator {
 
     init { RegisteredOptions.optionProperties += source to this }
 

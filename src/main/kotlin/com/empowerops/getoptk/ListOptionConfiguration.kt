@@ -3,13 +3,13 @@ package com.empowerops.getoptk
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 
-class ListOptionConfiguration<T: List<*>>(source: CLI, optionType: KClass<T>)
-: CommandLineOption<T>, ReflectivelyInitialized {
+class ListOptionConfiguration<T: Any>(source: CLI, optionType: KClass<T>)
+: CommandLineOption<T>, OptionCombinator {
 
     init { RegisteredOptions.optionProperties += source to this }
 
     //name change to avoid confusion, user might want a "parse the whole value as a list"
-    var elementParser: (String) -> T = Parsers.getDefaultFor(optionType)
+    var elementConverter: Converter<T> = Converters.getDefaultFor(optionType)
 
     override var description: String = ""
     override var names: List<String> = CommandLineOption.INFER_NAMES

@@ -24,4 +24,26 @@ class UsageExample {
         val helloString: String by getOpt {}
     }
 
+    @Test fun `when parsing thing with two options should properly parse`(){
+
+        //setup
+        val args = arrayOf("--helloString", "Hello_getoptk!", "-o", "weird")
+
+        //act
+        val instance = args.parsedAs { TwoFieldImpl() }
+        val helloStringResult = instance.helloString
+        val oddString = instance.anotherString
+
+        //assert
+        assertThat(helloStringResult).isEqualTo("Hello_getoptk!")
+        assertThat(oddString).isEqualTo("weird")
+    }
+
+    class TwoFieldImpl(): CLI {
+        val helloString: String by getOpt {}
+        val anotherString: String by getOpt {
+            names = listOf("oddball", "o")
+        }
+    }
+
 }
