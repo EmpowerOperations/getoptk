@@ -20,7 +20,7 @@ class UsageExample {
         assertThat(result).isEqualTo("Hello_getoptk!")
     }
     class SimpleImpl: CLI {
-        val helloString: String by getOpt {}
+        val helloString: String by getOpt()
     }
 
 
@@ -39,7 +39,7 @@ class UsageExample {
         assertThat(oddString).isEqualTo("weird")
     }
     class TwoFieldImpl: CLI {
-        val helloString: String by getOpt {}
+        val helloString: String by getOpt()
         val anotherString: String by getOpt {
             longName = "oddball"
             shortName = "o"
