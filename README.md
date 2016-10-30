@@ -6,7 +6,7 @@ _getoptk_ a command line parsing library for kotlin. It leverages standard conve
 A simple program using getoptk would be:
  
 ```kotlin
- fun main(args: Array<String>){
+fun main(args: Array<String>){
   val config = args.parsedAs { CLIConfig() }
   
   //...
