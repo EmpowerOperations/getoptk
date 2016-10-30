@@ -6,6 +6,7 @@ import kotlin.reflect.KProperty
 class ValueOptionConfiguration<T: Any>(
         source: CLI,
         optionType: KClass<T>,
+        override val errorReporter: ErrorReporter,
         private val userConfig: ValueOptionConfiguration<T>.() -> Unit
 ) : CommandLineOption<T>, OptionCombinator {
 
@@ -35,7 +36,7 @@ class ValueOptionConfiguration<T: Any>(
         userConfig()
     }
 
-    override fun reduce(tokens: List<Token>): List<Token> = with(Marker(tokens)){
+    override fun reduce(tokens: List<Token>): List<Token> = analyzing(tokens){
 
         if( ! nextIs<OptionPreambleToken>()) return tokens
         if( ! nextIs<OptionName> { it.text in names() }) return tokens

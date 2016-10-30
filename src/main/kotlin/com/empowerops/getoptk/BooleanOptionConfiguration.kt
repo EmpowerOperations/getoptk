@@ -4,6 +4,7 @@ import kotlin.reflect.KProperty
 
 class BooleanOptionConfiguration(
         source: CLI,
+        override val errorReporter: ErrorReporter,
         private val userConfig: BooleanOptionConfiguration.() -> Unit
 ): CommandLineOption<Boolean>, OptionCombinator {
 
@@ -26,7 +27,7 @@ class BooleanOptionConfiguration(
         userConfig()
     }
 
-    override fun reduce(tokens: List<Token>): List<Token> = with(Marker(tokens)){
+    override fun reduce(tokens: List<Token>): List<Token> = analyzing(tokens){
 
         if ( ! nextIs<OptionPreambleToken>()) return tokens
         if ( ! nextIs<OptionName> { it.text in names() }) return tokens
@@ -38,4 +39,6 @@ class BooleanOptionConfiguration(
         return rest()
     }
 }
+
+
 

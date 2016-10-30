@@ -6,19 +6,22 @@ import kotlin.reflect.KProperty
 class ListOptionConfiguration<T: Any>(
         source: CLI,
         optionType: KClass<T>,
+        converters: Converters,
+        override val errorReporter: ErrorReporter,
         private val userConfig: ListOptionConfiguration<T>.() -> Unit)
 : CommandLineOption<List<T>>, OptionCombinator {
 
     init { RegisteredOptions.optionProperties += source to this }
 
     //name change to avoid confusion, user might want a "parse the whole value as a list"
-    var elementConverter: Converter<T> = Converters.getDefaultFor(optionType)
+    var elementConverter: Converter<T> = converters.getDefaultFor(optionType)
 
     override var description: String = ""
     override lateinit var shortName: String
     override lateinit var longName: String
 
     var parseMode: ParseMode = ParseMode.CSV
+    var required: Boolean = true
 
     internal lateinit var value: List<T>;
 
@@ -32,7 +35,7 @@ class ListOptionConfiguration<T: Any>(
         userConfig()
     }
 
-    override fun reduce(tokens: List<Token>): List<Token> = with(Marker(tokens)) {
+    override fun reduce(tokens: List<Token>): List<Token> = analyzing(tokens){
 
         if ( ! nextIs<OptionPreambleToken>()) return tokens
         if ( ! nextIs<OptionName>{ it.text in names() }) return tokens

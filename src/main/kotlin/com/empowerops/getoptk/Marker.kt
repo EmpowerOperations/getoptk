@@ -1,6 +1,12 @@
 package com.empowerops.getoptk
 
-class Marker(private var tokens: List<Token>){
+class Marker(
+        val errorReporter: ErrorReporter,
+        private var tokens: List<Token>
+){
+
+    var previouslyReadTokens = emptyList<Token>(); private set;
+    val allReadTokens: List<Token> get() = previouslyReadTokens + marked()
 
     var index = 0
     lateinit var iterator: Iterator<Token>
@@ -20,7 +26,7 @@ class Marker(private var tokens: List<Token>){
     inline fun <reified T: Token> expect(){
         val next = next()
         if (next !is T){
-            TODO("log some kind of warning")
+            errorReporter.internalError(next, "token type miss-match: expected token of type ${T::class.simpleName} ")
         }
     }
 
@@ -31,6 +37,7 @@ class Marker(private var tokens: List<Token>){
     fun rest(): List<Token> = tokens.subList(index, tokens.size)
 
     fun resetTo(tokens: List<Token>){
+        previouslyReadTokens += marked()
         this.tokens = tokens
         iterator = tokens.iterator()
         index = 0

@@ -12,7 +12,9 @@ internal object RegisteredOptions {
     //to solve thread-safety... some kind of atomically updating map? += on immutable maps probably wont do it.
     // also, should be a WeakHashMap or Map<WeakReference<CLI..., probably.
     // attempting to maintain that nice eager parsing property when KProperty is lazy is going to result in some odd code.
-    var optionProperties: Multimap<CLI, OptionCombinator> = HashMultimap.create()
+    val optionProperties: Multimap<CLI, OptionCombinator> = HashMultimap.create()
 }
 
 operator fun <K, V> Multimap<K, V>.plusAssign(pair: Pair<K, V>) { this.put(pair.first, pair.second) }
+
+data class Problem(val superToken: String, val description: String, val location: IntRange, val trace: Exception? = null)

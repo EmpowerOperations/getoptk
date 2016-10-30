@@ -9,20 +9,31 @@ interface Converter<out T>{
     fun convert(text: String): T
 }
 
-object Converters {
-    fun <T : Any> getDefaultFor(type: KClass<T>): Converter<T> = when(type){
-        String::class -> type.wrap { it }
-        Int::class -> type.wrap(String::toInt)
-        Long::class -> type.wrap(String::toLong)
-        Char::class -> type.wrap { require(it.length == 1); it[0] }
+class Converters(val errorReporter: ErrorReporter) {
+
+    fun <T : Any> getDefaultFor(type: KClass<T>): Converter<T> = when{
+        type == String::class -> DefaultConverter(type) { it }
+        type == Int::class -> DefaultConverter(type, String::toInt)
+        type == Long::class -> DefaultConverter(type, String::toLong)
+        type == Char::class -> DefaultConverter(type) { text ->
+            require(text.length == 1){ "char variables must be exactly 1 character" };
+            return@DefaultConverter text[0]
+        }
+        type.java.isEnum -> {
+            TODO()
+        }
         else -> TODO()
     }
 
-    fun <T: Any> KClass<T>.wrap(parser: (String) -> Any): Converter<T> {
-        return object : Converter<T> {
-            val type = this@wrap
-            override fun convert(text: String): T {
-                return try { type.java.cast(parser(text)) } catch(e: Exception) { TODO() }
+    inner class DefaultConverter<T: Any>(val type: KClass<T>, val parser: (String) -> Any): Converter<T>{
+        override fun convert(text: String): T {
+            return try {
+                val parsedValue: Any = parser(text)
+                type.java.cast(parsedValue)
+            }
+            catch(e: Exception) {
+                errorReporter.reportProblem(TODO(), TODO(), "failed to parse '$text': ${e.message}")
+                CONVERT_FAILED as T //use heap pollution? really??
             }
         }
     }

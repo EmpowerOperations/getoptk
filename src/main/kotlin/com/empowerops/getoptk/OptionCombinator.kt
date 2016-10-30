@@ -3,26 +3,59 @@ package com.empowerops.getoptk
 import kotlin.reflect.KProperty
 
 internal interface OptionCombinator {
+
+    val errorReporter: ErrorReporter
+
     fun finalizeInit(hostingProperty: KProperty<*>)
     fun reduce(tokens: List<Token>): List<Token>
 }
 
-internal class AggregateCombinator(val componentCombinators: List<OptionCombinator>) : OptionCombinator {
-    override fun finalizeInit(hostingProperty: KProperty<*>) = TODO()
+internal inline fun <R> OptionCombinator.analyzing(tokens: List<Token>, block: Marker.() -> R): R {
+    with(Marker(errorReporter, tokens)){
+        val result: R = block()
+        errorReporter.debug {
+            """finished analysis
+              |tokens=$tokens
+              |caller=${this@analyzing}
+              |lastReadToken=${allReadTokens.lastOrNull()}
+              |allReadTokens=$allReadTokens
+              |result=$result
+              """.trimMargin()
+        }
+        return result;
+    }
+}
+
+internal class AggregateCombinator(
+        override val errorReporter: ErrorReporter,
+        val componentCombinators: List<OptionCombinator>
+) : OptionCombinator {
+
+    override fun finalizeInit(hostingProperty: KProperty<*>) = throw UnsupportedOperationException()
 
     override fun reduce(tokens: List<Token>): List<Token> {
 
-        var currentTokens = tokens
+        var remainingTokens = tokens
 
         do {
-            val oldTokens = currentTokens
-            currentTokens = componentCombinators.fold(currentTokens) { remaining, opt ->
+            val oldTokens = remainingTokens
+
+            remainingTokens = componentCombinators.fold(remainingTokens) { remaining, opt ->
                 if(remaining.any()) opt.reduce(remaining) else remaining
             }
-        }
-        while (currentTokens != oldTokens && currentTokens.any())
 
-        return currentTokens;
+            if(remainingTokens == oldTokens){
+                remainingTokens = recover(remainingTokens)
+            }
+        }
+        while (remainingTokens != oldTokens && remainingTokens.any())
+
+        return remainingTokens;
+    }
+
+    private fun recover(remainingTokens: List<Token>): List<Token> {
+        errorReporter.reportProblem(remainingTokens.first(), 0..0, "unrecognized option")
+        return remainingTokens.dropWhile { it !is SuperTokenSeparator }.drop(1)
     }
 
 }

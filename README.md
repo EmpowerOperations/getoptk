@@ -37,9 +37,10 @@ program -a 1.3 --beta 42 --customers Jane Mary
 ```
 
 TODO:
-- [ ] help printing (steal JCommander's?)
+- [ ] help printing (steal JCommander'errorMessage?)
 - [ ] error reporting
 - [ ] `required` fields
 - [ ] thread safety & removal of nasty static registry `...getoptk.RegisteredOptions`
 - [ ] data-class destructuring
 - [ ] `@configFile.txt` style load-arguments-from-file
+- [ ] parser recovery (allign with next SupertokenSeparator boundary)
