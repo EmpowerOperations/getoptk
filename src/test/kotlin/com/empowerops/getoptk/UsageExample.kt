@@ -19,7 +19,7 @@ class UsageExample {
         //assert
         assertThat(result).isEqualTo("Hello_getoptk!")
     }
-    class SimpleImpl() : CLI {
+    class SimpleImpl: CLI {
         val helloString: String by getOpt {}
     }
 
@@ -38,12 +38,26 @@ class UsageExample {
         assertThat(helloStringResult).isEqualTo("Hello_getoptk!")
         assertThat(oddString).isEqualTo("weird")
     }
-    class TwoFieldImpl(): CLI {
+    class TwoFieldImpl: CLI {
         val helloString: String by getOpt {}
         val anotherString: String by getOpt {
             longName = "oddball"
             shortName = "o"
         }
+    }
+
+    @Test fun `when parsing two options with assignment syntax should properly parse`(){
+        //setup
+        val args = arrayOf("--helloString=Hello_getoptk!", "-o=weird")
+
+        //act
+        val instance = args.parsedAs { TwoFieldImpl() }
+        val helloStringResult = instance.helloString
+        val oddString = instance.anotherString
+
+        //assert
+        assertThat(helloStringResult).isEqualTo("Hello_getoptk!")
+        assertThat(oddString).isEqualTo("weird")
     }
 
     @Test fun `when parsing lists should properly split and parse`(){
@@ -56,7 +70,9 @@ class UsageExample {
         //assert
         assertThat(instance.ints).isEqualTo(listOf(1, 2, 3))
     }
-    class ListImpl(): CLI {
+    class ListImpl: CLI {
         val ints: List<Int> by getListOpt()
     }
+
 }
+

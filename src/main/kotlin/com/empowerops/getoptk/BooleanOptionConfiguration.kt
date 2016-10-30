@@ -14,9 +14,9 @@ class BooleanOptionConfiguration(
     override lateinit var longName: String
     override lateinit var shortName: String
 
-    internal var value: Boolean? = null
+    internal var value: Boolean = false
 
-    override operator fun getValue(thisRef: CLI, property: KProperty<*>): Boolean = value!!
+    override operator fun getValue(thisRef: CLI, property: KProperty<*>): Boolean = value
 
     override fun finalizeInit(hostingProperty: KProperty<*>) {
         description = Inferred.generateInferredDescription(hostingProperty)
@@ -28,11 +28,12 @@ class BooleanOptionConfiguration(
 
     override fun reduce(tokens: List<Token>): List<Token> = with(Marker(tokens)){
 
-        if ( ! nextIs<OptionPreambleToken>()
-                || ! nextIs<OptionName>{ it.text in names() }
-                || ! nextIs<SuperTokenSeparator>()){
-            return tokens;
-        }
+        if ( ! nextIs<OptionPreambleToken>()) return tokens
+        if ( ! nextIs<OptionName> { it.text in names() }) return tokens
+
+        value = true
+
+        expect<SuperTokenSeparator>()
 
         return rest()
     }

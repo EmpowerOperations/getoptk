@@ -36,7 +36,7 @@ class ListOptionConfiguration<T: Any>(
 
         if ( ! nextIs<OptionPreambleToken>()) return tokens
         if ( ! nextIs<OptionName>{ it.text in names() }) return tokens
-        if ( ! nextIs<SuperTokenSeparator>()) return tokens
+        if ( ! nextIs<SeparatorToken>()) return tokens
 
         val argument = (next() as? Argument)?.text ?: return tokens
 

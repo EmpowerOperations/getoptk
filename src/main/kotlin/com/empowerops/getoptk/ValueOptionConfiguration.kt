@@ -37,11 +37,9 @@ class ValueOptionConfiguration<T: Any>(
 
     override fun reduce(tokens: List<Token>): List<Token> = with(Marker(tokens)){
 
-        if( ! (nextIs<OptionPreambleToken>()
-                && nextIs<OptionName> { it.text in names() }
-                && nextIs<SuperTokenSeparator>())) {
-            return tokens
-        }
+        if( ! nextIs<OptionPreambleToken>()) return tokens
+        if( ! nextIs<OptionName> { it.text in names() }) return tokens
+        if( ! nextIs<SeparatorToken>()) return tokens
 
         val argText = (next() as? Argument)?.text ?: return tokens
 

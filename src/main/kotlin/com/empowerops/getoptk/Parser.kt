@@ -27,11 +27,13 @@ object Parser {
     }
 
     internal fun <T : CLI> captureRegisteredOpts(hostFactory: () -> T): Pair<List<OptionCombinator>, T> {
-        RegisteredOptions.optionProperties = HashMultimap.create()
+
         val result = hostFactory()
 
         val members = result.javaClass.kotlin.members.filterIsInstance<KProperty<*>>()
         val registeredOptions = RegisteredOptions.optionProperties[result]!!.toList()
+
+        RegisteredOptions.optionProperties[result].clear()
 
         //TODO: sort to allow deterministic hierarchy of duplicate-avoidance scheme
         // in other words, if you have two properties that both start with 'h', what does -h mean?
