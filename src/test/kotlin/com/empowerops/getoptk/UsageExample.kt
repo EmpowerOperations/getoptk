@@ -19,10 +19,10 @@ class UsageExample {
         //assert
         assertThat(result).isEqualTo("Hello_getoptk!")
     }
-
     class SimpleImpl() : CLI {
         val helloString: String by getOpt {}
     }
+
 
     @Test fun `when parsing thing with two options should properly parse`(){
 
@@ -38,7 +38,6 @@ class UsageExample {
         assertThat(helloStringResult).isEqualTo("Hello_getoptk!")
         assertThat(oddString).isEqualTo("weird")
     }
-
     class TwoFieldImpl(): CLI {
         val helloString: String by getOpt {}
         val anotherString: String by getOpt {
@@ -47,4 +46,17 @@ class UsageExample {
         }
     }
 
+    @Test fun `when parsing lists should properly split and parse`(){
+        //setup
+        val args = arrayOf("--ints", "1,2,3")
+
+        //act
+        val instance = args.parsedAs { ListImpl() }
+
+        //assert
+        assertThat(instance.ints).isEqualTo(listOf(1, 2, 3))
+    }
+    class ListImpl(): CLI {
+        val ints: List<Int> by getListOpt()
+    }
 }

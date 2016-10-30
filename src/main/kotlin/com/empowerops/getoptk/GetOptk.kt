@@ -14,7 +14,7 @@ interface CLI {
 
     companion object {
         fun <T: CLI> parse(args: Array<String>, hostFactory: () -> T): T
-                = Parser.parse(args, hostFactory)
+                = Parser.parse(args.asIterable(), hostFactory)
     }
 }
 

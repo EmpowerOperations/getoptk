@@ -36,6 +36,7 @@ class ListOptionConfiguration<T: Any>(
 
         if ( ! nextIs<OptionPreambleToken>()) return tokens
         if ( ! nextIs<OptionName>{ it.text in names() }) return tokens
+        if ( ! nextIs<SuperTokenSeparator>()) return tokens
 
         val argument = (next() as? Argument)?.text ?: return tokens
 
@@ -46,6 +47,8 @@ class ListOptionConfiguration<T: Any>(
         val parsedItems = splitItems.map { elementConverter.convert(it) }
 
         value = parsedItems
+
+        expect<SuperTokenSeparator>()
 
         return rest()
     }

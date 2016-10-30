@@ -6,11 +6,11 @@ import kotlin.reflect.jvm.javaField
 
 object Parser {
 
-    fun <T : CLI> parse(args: Array<String>, hostFactory: () -> T): T {
+    fun <T : CLI> parse(args: Iterable<String>, hostFactory: () -> T): T {
 
         val (opts, result) = captureRegisteredOpts(hostFactory)
 
-        var tokens = Lexer.lex(args.asIterable())
+        var tokens = Lexer.lex(args)
 
         val root = AggregateCombinator(opts)
 

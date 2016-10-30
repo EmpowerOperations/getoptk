@@ -9,7 +9,7 @@ interface ParseMode {
         //indicate that a list arg is --list x --list y --list z
         val iteratively: ParseMode = IterativeParseMode
 
-        fun separator(separator: String): ParseMode = TODO()
+        fun separator(separator: String): ParseMode = SeparatorParseMode(separator)
         fun regex(regex: Regex, captureGroupName: String = "item"): ParseMode = TODO()
     }
 
