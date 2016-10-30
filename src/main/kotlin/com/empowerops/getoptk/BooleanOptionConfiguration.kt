@@ -2,14 +2,18 @@ package com.empowerops.getoptk
 
 import kotlin.reflect.KProperty
 
-class BooleanOptionConfiguration(source: CLI): CommandLineOption<Boolean>, OptionCombinator {
+class BooleanOptionConfiguration(
+        source: CLI,
+        private val userConfig: BooleanOptionConfiguration.() -> Unit
+): CommandLineOption<Boolean>, OptionCombinator {
 
     init { RegisteredOptions.optionProperties += source to this }
 
     override var description: String = ""
 
     //problem: how do we express "compact" form (eg tar -xfvj)?
-    override var names: List<String> = CommandLineOption.INFER_NAMES
+    override lateinit var longName: String
+    override lateinit var shortName: String
 
     // problem: worth allowing a user to specify a custom parsing mode?
     // dont think so.
@@ -17,13 +21,16 @@ class BooleanOptionConfiguration(source: CLI): CommandLineOption<Boolean>, Optio
     override operator fun getValue(thisRef: CLI, property: KProperty<*>): Boolean = TODO();
 
     override fun finalizeInit(hostingProperty: KProperty<*>) {
-        if(description == "") description = Inferred.generateInferredDescription(hostingProperty)
-        if(names === CommandLineOption.INFER_NAMES) names = Inferred.generateInferredNames(hostingProperty)
+        description = Inferred.generateInferredDescription(hostingProperty)
+        longName = Inferred.generateInferredLongName(hostingProperty)
+        shortName = Inferred.generateInferredShortName(hostingProperty)
+
+        userConfig()
     }
 
     override fun reduce(tokens: List<Token>): List<Token> {
         if(tokens[0] is OptionPreambleToken
-                && tokens[1].let { it is OptionName && it.text in names }
+                && tokens[1].let { it is OptionName && it.text in longName }
                 && tokens[2].let { it is SuperTokenSeparator }){
 
             return tokens.subList(3, tokens.size)
@@ -36,5 +43,9 @@ object Inferred {
 
     fun generateInferredDescription(prop: KProperty<*>) = "[description of $prop]"
 
-    fun generateInferredNames(prop: KProperty<*>) = with(prop) { listOf("$name", "${name[0]}") }
+    //TODO this needs to register to some kind of conflict-avoiding pool.
+    // such that if two properties start with the same letter say ('h'),
+    // we don't introduce ambiguity
+    fun generateInferredShortName(prop: KProperty<*>) = prop.name[0].toString()
+    fun generateInferredLongName(prop: KProperty<*>) = prop.name
 }

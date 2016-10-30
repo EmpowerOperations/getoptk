@@ -42,7 +42,7 @@ class UsageExample {
     class TwoFieldImpl(): CLI {
         val helloString: String by getOpt {}
         val anotherString: String by getOpt {
-            names = listOf("oddball", "o")
+            longName = listOf("oddball", "o")
         }
     }
 

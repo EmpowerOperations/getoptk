@@ -38,8 +38,7 @@ object Parser {
         // well the alphabetically-first one gets -h, the second gets -hwhatevs
         for (registered in registeredOptions) {
 
-            //hmm, seems like there is no way to avoid SecurityExceptions if we want parsing to be eager
-            // in other words, its probably a better idea to stick to the lazy parsing idea...
+            // pending https://youtrack.jetbrains.com/issue/KT-8384
             val matchingProp = members.single { it.javaField?.apply { isAccessible = true }?.get(result) == registered }
             registered.finalizeInit(matchingProp)
         }

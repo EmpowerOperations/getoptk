@@ -3,7 +3,10 @@ package com.empowerops.getoptk
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 
-class ListOptionConfiguration<T: Any>(source: CLI, optionType: KClass<T>)
+class ListOptionConfiguration<T: Any>(
+        source: CLI,
+        optionType: KClass<T>,
+        private val userConfig: ListOptionConfiguration<T>.() -> Unit)
 : CommandLineOption<T>, OptionCombinator {
 
     init { RegisteredOptions.optionProperties += source to this }
@@ -12,12 +15,8 @@ class ListOptionConfiguration<T: Any>(source: CLI, optionType: KClass<T>)
     var elementConverter: Converter<T> = Converters.getDefaultFor(optionType)
 
     override var description: String = ""
-    override var names: List<String> = CommandLineOption.INFER_NAMES
-
-    //can this always be inferred?
-    //should we support `prog --list 1 2 3` as being varags for a list with 3 elements?
-    //what if you want a list of multi-arity (the obvious example being a map) then you get --list "hello" 1 "world" 2.
-    var arity: Int = 1
+    override lateinit var shortName: String
+    override lateinit var longName: String
 
     var parseMode: ParseMode = ParseMode.CSV
 
@@ -26,12 +25,15 @@ class ListOptionConfiguration<T: Any>(source: CLI, optionType: KClass<T>)
     }
 
     override fun finalizeInit(hostingProperty: KProperty<*>) {
-        if(description == "") description = Inferred.generateInferredDescription(hostingProperty)
-        if(names === CommandLineOption.INFER_NAMES) names = Inferred.generateInferredNames(hostingProperty)
+        description = Inferred.generateInferredDescription(hostingProperty)
+        shortName = Inferred.generateInferredShortName(hostingProperty)
+        longName = Inferred.generateInferredLongName(hostingProperty)
+
+        userConfig()
     }
 
     override fun reduce(tokens: List<Token>): List<Token> {
-        TODO()
+
     }
 
 }
