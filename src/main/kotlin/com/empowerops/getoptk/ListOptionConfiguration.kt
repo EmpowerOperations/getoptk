@@ -32,8 +32,15 @@ class ListOptionConfiguration<T: Any>(
         userConfig()
     }
 
-    override fun reduce(tokens: List<Token>): List<Token> {
-
+    override fun reduce(tokens: List<Token>): List<Token> = with(Marker(tokens)) {
+        when {
+            next<OptionPreambleToken>()
+                    && next<OptionName> { it in names() }
+                    && parseMode.matches(rest()) -> {
+                rest()
+            }
+            else -> tokens
+        }
     }
 
 }
