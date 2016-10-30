@@ -74,5 +74,21 @@ class UsageExample {
         val ints: List<Int> by getListOpt()
     }
 
+    @Test fun `when using varargs should properly split`(){
+        //setup
+        val args = arrayOf("--items", "first", "second", "third", "fourth")
+
+        //act
+        val instance = args.parsedAs { AnotherListImpl() }
+
+        //assert
+        assertThat(instance.items).isEqualTo(listOf("first", "second", "third", "fourth"))
+    }
+    class AnotherListImpl: CLI {
+        val items: List<String> by getListOpt {
+            parseMode = ParseMode.varargs
+        }
+    }
+
 }
 

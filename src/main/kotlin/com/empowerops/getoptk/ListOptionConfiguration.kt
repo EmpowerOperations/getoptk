@@ -38,11 +38,11 @@ class ListOptionConfiguration<T: Any>(
         if ( ! nextIs<OptionName>{ it.text in names() }) return tokens
         if ( ! nextIs<SeparatorToken>()) return tokens
 
-        val argument = (next() as? Argument)?.text ?: return tokens
-
-        val splitItems = parseMode.spread(argument)
+        val (splitItems, remainingTokens) = parseMode.reduce(rest())
 
         if (splitItems.isEmpty()) return tokens
+
+        resetTo(remainingTokens)
 
         val parsedItems = splitItems.map { elementConverter.convert(it) }
 

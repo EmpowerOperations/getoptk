@@ -1,6 +1,5 @@
 package com.empowerops.getoptk
 
-import com.google.common.collect.HashMultimap
 import kotlin.reflect.KProperty
 import kotlin.reflect.jvm.javaField
 
@@ -17,7 +16,7 @@ object Parser {
         tokens = root.reduce(tokens)
 
         if (tokens.any()){
-            TODO("tokens werent consumed: $tokens")
+            TODO("tokens weren't consumed: $tokens")
         }
 
         //also recovery from fixed-point convergence on non-empty tokens
