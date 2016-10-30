@@ -23,7 +23,7 @@ object Parser {
         //also recovery from fixed-point convergence on non-empty tokens
         // (IE: there are unconsumed things in the args list)
 
-        return result;
+        return result
     }
 
     internal fun <T : CLI> captureRegisteredOpts(hostFactory: () -> T): Pair<List<OptionCombinator>, T> {

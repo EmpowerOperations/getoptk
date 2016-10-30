@@ -9,16 +9,14 @@ class BooleanOptionConfiguration(
 
     init { RegisteredOptions.optionProperties += source to this }
 
-    override var description: String = ""
+    override lateinit var description: String
 
-    //problem: how do we express "compact" form (eg tar -xfvj)?
     override lateinit var longName: String
     override lateinit var shortName: String
 
-    // problem: worth allowing a user to specify a custom parsing mode?
-    // dont think so.
+    internal var value: Boolean? = null
 
-    override operator fun getValue(thisRef: CLI, property: KProperty<*>): Boolean = TODO();
+    override operator fun getValue(thisRef: CLI, property: KProperty<*>): Boolean = value!!
 
     override fun finalizeInit(hostingProperty: KProperty<*>) {
         description = Inferred.generateInferredDescription(hostingProperty)
@@ -28,24 +26,15 @@ class BooleanOptionConfiguration(
         userConfig()
     }
 
-    override fun reduce(tokens: List<Token>): List<Token> {
-        if(tokens[0] is OptionPreambleToken
-                && tokens[1].let { it is OptionName && it.text in longName }
-                && tokens[2].let { it is SuperTokenSeparator }){
+    override fun reduce(tokens: List<Token>): List<Token> = with(Marker(tokens)){
 
-            return tokens.subList(3, tokens.size)
+        if ( ! nextIs<OptionPreambleToken>()
+                || ! nextIs<OptionName>{ it.text in names() }
+                || ! nextIs<SuperTokenSeparator>()){
+            return tokens;
         }
-        else return tokens
+
+        return rest()
     }
 }
 
-object Inferred {
-
-    fun generateInferredDescription(prop: KProperty<*>) = "[description of $prop]"
-
-    //TODO this needs to register to some kind of conflict-avoiding pool.
-    // such that if two properties start with the same letter say ('h'),
-    // we don't introduce ambiguity
-    fun generateInferredShortName(prop: KProperty<*>) = prop.name[0].toString()
-    fun generateInferredLongName(prop: KProperty<*>) = prop.name
-}

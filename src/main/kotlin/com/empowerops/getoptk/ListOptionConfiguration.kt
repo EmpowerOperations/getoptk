@@ -7,7 +7,7 @@ class ListOptionConfiguration<T: Any>(
         source: CLI,
         optionType: KClass<T>,
         private val userConfig: ListOptionConfiguration<T>.() -> Unit)
-: CommandLineOption<T>, OptionCombinator {
+: CommandLineOption<List<T>>, OptionCombinator {
 
     init { RegisteredOptions.optionProperties += source to this }
 
@@ -20,9 +20,9 @@ class ListOptionConfiguration<T: Any>(
 
     var parseMode: ParseMode = ParseMode.CSV
 
-    override operator fun getValue(thisRef: CLI, property: KProperty<*>): T {
-        TODO()
-    }
+    internal lateinit var value: List<T>;
+
+    override operator fun getValue(thisRef: CLI, property: KProperty<*>): List<T> = value
 
     override fun finalizeInit(hostingProperty: KProperty<*>) {
         description = Inferred.generateInferredDescription(hostingProperty)
@@ -33,14 +33,21 @@ class ListOptionConfiguration<T: Any>(
     }
 
     override fun reduce(tokens: List<Token>): List<Token> = with(Marker(tokens)) {
-        when {
-            next<OptionPreambleToken>()
-                    && next<OptionName> { it in names() }
-                    && parseMode.matches(rest()) -> {
-                rest()
-            }
-            else -> tokens
-        }
+
+        if ( ! nextIs<OptionPreambleToken>()) return tokens
+        if ( ! nextIs<OptionName>{ it.text in names() }) return tokens
+
+        val argument = (next() as? Argument)?.text ?: return tokens
+
+        val splitItems = parseMode.spread(argument)
+
+        if (splitItems.isEmpty()) return tokens
+
+        val parsedItems = splitItems.map { elementConverter.convert(it) }
+
+        value = parsedItems
+
+        return rest()
     }
 
 }

@@ -20,6 +20,8 @@ class ValueOptionConfiguration<T: Any>(
     internal var initialized = false
     internal var _value: T? = null
 
+    override fun toString() = "--$longName <arg>"
+
     override operator fun getValue(thisRef: CLI, property: KProperty<*>): T{
         require(initialized) { "TODO: nice error message" }
         return _value!! //uhh, how do I make this nullable iff user specified T as "String?" or some such?
@@ -35,41 +37,20 @@ class ValueOptionConfiguration<T: Any>(
 
     override fun reduce(tokens: List<Token>): List<Token> = with(Marker(tokens)){
 
-        //TODO: a (proper) combinator here would give us:
-        // 1. a more slick grammar
-        // 2. better error reporting --maybe return Either<ErrorMessage, List<Token>>?
-        if(next<OptionPreambleToken>()
-                && next<OptionName> { it.text in longName }
-                && next<SuperTokenSeparator>()
-                && next<Argument>()
-                && next<SuperTokenSeparator>()){
-
-            _value = converter.convert(marked().filterIsInstance<Argument>().single().text)
-            initialized = true
-
-            println("reduced to size = ${rest().size}")
-            return rest()
-        }
-        else {
-            println("failed to reduce")
+        if( ! (nextIs<OptionPreambleToken>()
+                && nextIs<OptionName> { it.text in names() }
+                && nextIs<SuperTokenSeparator>())) {
             return tokens
         }
+
+        val argText = (next() as? Argument)?.text ?: return tokens
+
+        _value = converter.convert(argText)
+        initialized = true
+
+        expect<SuperTokenSeparator>()
+
+        return rest()
     }
 }
 
-class Marker(val tokens: List<Token>){
-
-    var index = 0;
-    val iterator = tokens.iterator()
-
-    fun next(): Token{
-        index += 1
-        return iterator.next()
-    }
-
-    inline fun <reified T: Token> next(noinline condition: (T) -> Boolean = { true })
-            = (next() as? T)?.run(condition) ?: false
-
-    fun marked(): List<Token> = tokens.subList(0, (index+1).coerceAtMost(tokens.size))
-    fun rest(): List<Token> = tokens.subList(index, tokens.size)
-}

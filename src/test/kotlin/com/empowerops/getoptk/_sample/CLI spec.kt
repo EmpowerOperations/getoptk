@@ -59,7 +59,7 @@ interface CommandLineOption<T : Any> {
 }
 
 
-//note: the three below classes could almost certainly be combined polymorphically to reduce the number of "duplicate"
+//note: the three below classes could almost certainly be combined polymorphically to spread the number of "duplicate"
 // fields, but my core principal here is "ctrl + click"able-ness.
 // If i have to repeat some documentation and some `var` statements, so be it.
 

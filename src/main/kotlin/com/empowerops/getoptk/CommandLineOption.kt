@@ -10,15 +10,5 @@ interface CommandLineOption<out T: Any>: ReadOnlyProperty<CLI, T> {
     val longName: String
 }
 
-interface ParseMode {
+fun CommandLineOption<*>.names() = listOf(shortName, longName)
 
-    companion object {
-        //indicate that a list arg is --list x,y,z
-        val CSV: ParseMode = separator(",")
-
-        //indicate that a list arg is --list x --list y --list z
-        val iteratively: ParseMode = TODO()
-
-        fun separator(separator: String): ParseMode = TODO()
-    }
-}

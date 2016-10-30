@@ -21,18 +21,18 @@ interface CLI {
 fun <T: CLI> Array<String>.parsedAs(hostFactory: () -> T): T = CLI.parse(this, hostFactory)
 
 
-inline fun <reified T: Any> CLI.getOpt(noinline spec: ValueOptionConfiguration<T>.() -> Unit = {}): ValueOptionConfiguration<T>
+inline fun <reified T: Any> CLI.getOpt(noinline spec: ValueOptionConfiguration<T>.() -> Unit = {})
         = getOpt(this, spec, T::class)
 
-fun <T: Any> getOpt(cli: CLI, spec: ValueOptionConfiguration<T>.() -> Unit, type: KClass<T>): ValueOptionConfiguration<T>
-        = ValueOptionConfiguration(cli, type).apply(spec)
-
-fun CLI.getFlagOpt(spec: BooleanOptionConfiguration.() -> Unit = {}): BooleanOptionConfiguration
-        = BooleanOptionConfiguration(this).apply(spec)
-
-inline fun <reified E: Any> CLI.getListOpt(noinline spec: ListOptionConfiguration<E>.() -> Unit = {}): ListOptionConfiguration<E>
+inline fun <reified E: Any> CLI.getListOpt(noinline spec: ListOptionConfiguration<E>.() -> Unit = {})
         = getListOpt(this, spec, E::class)
 
-fun <T: Any> getListOpt(cli: CLI, spec: ListOptionConfiguration<T>.() -> Unit, elementType: KClass<T>): ListOptionConfiguration<T>
-        = ListOptionConfiguration(cli, elementType).apply(spec)
+fun <T: Any> getOpt(cli: CLI, spec: ValueOptionConfiguration<T>.() -> Unit, type: KClass<T>)
+        = ValueOptionConfiguration(cli, type, spec)
+
+fun CLI.getFlagOpt(spec: BooleanOptionConfiguration.() -> Unit = {})
+        = BooleanOptionConfiguration(this, spec)
+
+fun <T: Any> getListOpt(cli: CLI, spec: ListOptionConfiguration<T>.() -> Unit, elementType: KClass<T>)
+        = ListOptionConfiguration(cli, elementType, spec)
 
