@@ -50,7 +50,11 @@ object Parser {
 
 class ErrorReporter {
 
-    fun reportProblem(token: Token, location: IntRange, message: String){
+    fun reportParsingProblem(token: Token, message: String){
+        TODO()
+    }
+
+    fun reportConfigProblem(message: String){
         TODO()
     }
 

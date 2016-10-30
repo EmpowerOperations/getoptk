@@ -54,7 +54,7 @@ internal class AggregateCombinator(
     }
 
     private fun recover(remainingTokens: List<Token>): List<Token> {
-        errorReporter.reportProblem(remainingTokens.first(), 0..0, "unrecognized option")
+        errorReporter.reportParsingProblem(remainingTokens.first(), "unrecognized option")
         return remainingTokens.dropWhile { it !is SuperTokenSeparator }.drop(1)
     }
 

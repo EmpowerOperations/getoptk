@@ -1,6 +1,11 @@
 package com.empowerops.getoptk
 
+import java.lang.reflect.Method
+import java.lang.reflect.Modifier
 import kotlin.reflect.KClass
+import kotlin.reflect.companionObject
+import kotlin.reflect.companionObjectInstance
+import java.lang.Enum as JavaEnum
 
 //looks up strategies to convert strings to T's, eg "Double.parseDouble", "Boolean.parseBoolean", etc.
 // please note this object returns a closed converter, which might be weird
@@ -9,32 +14,100 @@ interface Converter<out T>{
     fun convert(text: String): T
 }
 
-class Converters(val errorReporter: ErrorReporter) {
+object DoubleConverter: DelegatingConverter<Double>(String::toDouble)
+object FloatConverter: DelegatingConverter<Float>(String::toFloat)
+object IntConverter: DelegatingConverter<Int>(String::toInt)
+object LongConverter: DelegatingConverter<Long>(String::toLong)
+object StringConverter: Converter<String>{ override fun convert(text: String) = text }
+object CharConverter: Converter<Char>{
+    override fun convert(text: String): Char {
+        require(text.length == 1){ "char variables must be exactly 1 character" }
+        return text[0]
+    }
+}
+class EnumConverter<T: Enum<T>>(val enumType: Class<T>): Converter<T>{
+    override fun convert(text: String): T {
+        val generatedEnum = JavaEnum.valueOf(enumType, text)
+        return enumType.cast(generatedEnum)
+    }
+}
 
-    fun <T : Any> getDefaultFor(type: KClass<T>): Converter<T> = when{
-        type == String::class -> DefaultConverter(type) { it }
-        type == Int::class -> DefaultConverter(type, String::toInt)
-        type == Long::class -> DefaultConverter(type, String::toLong)
-        type == Char::class -> DefaultConverter(type) { text ->
-            require(text.length == 1){ "char variables must be exactly 1 character" };
-            return@DefaultConverter text[0]
-        }
-        type.java.isEnum -> {
-            TODO()
-        }
-        else -> TODO()
+class StaticMethodCallConverter<T: Any>(val type: KClass<T>, methodName: String) : Converter<T>{
+
+    val method = type.java.getMethod(methodName, type.java).apply {
+        require(Modifier.isStatic(modifiers))
     }
 
-    inner class DefaultConverter<T: Any>(val type: KClass<T>, val parser: (String) -> Any): Converter<T>{
-        override fun convert(text: String): T {
-            return try {
-                val parsedValue: Any = parser(text)
-                type.java.cast(parsedValue)
-            }
-            catch(e: Exception) {
-                errorReporter.reportProblem(TODO(), TODO(), "failed to parse '$text': ${e.message}")
-                CONVERT_FAILED as T //use heap pollution? really??
-            }
+    override fun convert(text: String) = type.java.cast(method.invoke(null, text))
+}
+
+class CompanionMethodCallConverter<T: Any>(val type: KClass<T>, methodName: String): Converter<T>{
+
+    init {
+        require(type.companionObject != null)
+    }
+
+    val companionInstance = type.companionObjectInstance!!
+    val method = type.companionObject!!.getMethod(methodName, listOf(String::class))
+
+    override fun convert(text: String): T = type.java.cast(method.invoke(companionInstance, text))
+}
+
+abstract class DelegatingConverter<T>(val convertActual: (String) -> T): Converter<T>{
+    override fun convert(text: String): T = convertActual(text)
+}
+
+class Converters(val errorReporter: ErrorReporter) {
+
+    @Suppress("UNCHECKED_CAST", "IMPLICIT_CAST_TO_ANY") //unfortunately I'm moving from dynamic back into static types here.
+    //AFAIK there is no way to tell kotlin that if type == Int::class, then T == Int
+    inline fun <reified T : Any> getDefaultFor(type: KClass<T>): Converter<T> = when {
+
+        type.hasStaticMethod("valueOf", returnType = type, paramTypes = listOf(String::class)) -> StaticMethodCallConverter(type, "valueOf")
+        type.companionObject?.hasLocalMethod("valueOf", returnType = type, paramTypes = listOf(String::class)) ?: false -> CompanionMethodCallConverter(type, "valueOf")
+        type.hasStaticMethod("parse", returnType = type, paramTypes = listOf(String::class)) -> StaticMethodCallConverter(type, "parse")
+        type.companionObject?.hasLocalMethod("parse", returnType = type, paramTypes = listOf(String::class)) ?: false -> CompanionMethodCallConverter(type, "parse")
+
+        type == String::class -> StringConverter
+        type == Int::class -> IntConverter
+        type == Long::class -> LongConverter
+        type == Float::class -> FloatConverter
+        type == Double::class -> DoubleConverter
+        type == Char::class -> CharConverter
+        type.java.isEnum -> EnumConverter(type.java as Class<Nothing>)
+            //Nothing is a bottom type, only way I could think to satisfy the Enum<Enum<Enum...>>> problem
+
+        // bah, so this is called eagerly right now, meaning if I want to keep my nice readable source code
+        // then I need to convert the various config property classes to use `val parser by overridableLazy { getDefaultFor(T) }`
+        // hmm.
+        else -> errorReporter.reportConfigProblem("")
+    } as Converter<T>
+
+}
+
+fun KClass<*>.hasStaticMethod(name: String, returnType: KClass<*>, paramTypes: List<KClass<*>>)
+        = getMethod(name, paramTypes)?.let { it.isStatic && it.returnType == returnType.java } ?: false
+
+private fun KClass<*>.getMethod(name: String, paramTypes: List<KClass<*>>)
+        = this.java.getMethod(name, *paramTypes.map { it.java }.toTypedArray())
+val Method.isStatic: Boolean get() = Modifier.isStatic(modifiers)
+
+fun KClass<*>.hasLocalMethod(name: String, returnType: KClass<*>, paramTypes: List<KClass<*>>)
+        = getMethod(name, paramTypes)?.let { it.returnType == returnType.java }
+
+class ErrorHandlingConverter<T: Any>(
+        val errorReporter: ErrorReporter,
+        val type: KClass<T>,
+        val parser: (String) -> Any
+){
+    fun convert(token: Token): Pair<Boolean, T?> {
+        return try {
+            val parsedValue: Any = parser(token.text)
+            true to type.java.cast(parsedValue)
+        }
+        catch(e: Exception) {
+            errorReporter.reportParsingProblem(token, "failed to parse as $type: ${e.message}")
+            false to null
         }
     }
 }

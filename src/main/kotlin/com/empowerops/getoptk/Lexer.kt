@@ -54,19 +54,29 @@ object Lexer {
 
 
 //TODO add location info for debug messages
-interface Token { val length: Int }
-abstract class Lemma: Token { abstract val Lemma: String; override val length: Int get() = Lemma.length }
+interface Token { val text: String; val length: Int get() = text.length }
+
+abstract class Lemma(val Lemma: String): Token {
+    override val length: Int get() = Lemma.length;
+    override val text: String get() = Lemma
+
+    override fun toString() = "[$Lemma]"
+}
 
 interface SeparatorToken : Token
-object SuperTokenSeparator: SeparatorToken { override val length = 0; override fun toString() = "[separator]"}
-object AssignmentSeparator: Lemma(), SeparatorToken { override val Lemma = "="; override fun toString() = "[=]"}
+object SuperTokenSeparator: SeparatorToken {
+    override val text = ""
+
+    override fun toString() = "[separator]"
+}
+object AssignmentSeparator: Lemma("="), SeparatorToken
 
 interface OptionPreambleToken: Token
-object ShortPreamble: Lemma(), OptionPreambleToken { override val Lemma = "-"; override fun toString() = "[-]"}
-object LongPreamble: Lemma(), OptionPreambleToken { override val Lemma = "--"; override fun toString() = "[--]" }
-object WindowsPreamble: Lemma(), OptionPreambleToken { override val Lemma = "/"; override fun toString() = "[/]" }
+object ShortPreamble: Lemma("-"), OptionPreambleToken
+object LongPreamble: Lemma("--"), OptionPreambleToken
+object WindowsPreamble: Lemma("/"), OptionPreambleToken
 
-data class OptionName(val text: String): Token { override val length: Int get() = text.length }
-data class Argument(val text: String): Token { override val length: Int get() = text.length }
+data class OptionName(override val text: String): Token
+data class Argument(override val text: String): Token
 
 fun <T> T.asSingleList() = listOf(this)
