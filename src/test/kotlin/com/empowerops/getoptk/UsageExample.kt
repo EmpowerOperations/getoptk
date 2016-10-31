@@ -90,5 +90,21 @@ class UsageExample {
         }
     }
 
+    @Test fun `when using flag options should properly set values`(){
+        //setup
+        val args = arrayOf("-f")
+
+        //act
+        val instance = args.parsedAs { FlagImpl() }
+
+        //assert
+        assertThat(instance.silent).isFalse()
+        assertThat(instance.force).isTrue()
+    }
+    class FlagImpl: CLI {
+        val silent by getFlagOpt()
+        val force by getFlagOpt()
+    }
+
 }
 
