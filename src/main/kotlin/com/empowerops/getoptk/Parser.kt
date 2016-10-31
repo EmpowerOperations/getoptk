@@ -51,19 +51,19 @@ object Parser {
 class ErrorReporter {
 
     fun reportParsingProblem(token: Token, message: String){
-        TODO()
+        println("parse failure at $token: $message")
     }
 
     fun reportConfigProblem(message: String){
-        TODO()
+        println("config problem: $message")
     }
 
     fun internalError(token: Token, errorMessage: String) {
-        TODO(errorMessage)
+        println("internal error at $token: $errorMessage")
     }
 
     fun debug(message: () -> String){
-        TODO(message())
+//        println("debug: ${message()}")
     }
 
     companion object {

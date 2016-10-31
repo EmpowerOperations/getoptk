@@ -2,35 +2,34 @@ package com.empowerops.getoptk
 
 interface ListSpreadMode {
 
-    fun reduce(tokens: List<Token>): Pair<List<String>, List<Token>>
+    //return value: left is a set of list item sub-tokens, right is the remaining unparsed tokens
+    fun reduce(tokens: List<Token>): Pair<List<ListItemText>, List<Token>>
 
     companion object {
         //indicate that a list arg is --list x,y,z
         val CSV: ListSpreadMode = separator(",")
 
         //indicate that you want the args like --list x y z
-        val varargs: ListSpreadMode = Varargs
+        val varargs: ListSpreadMode = Varargs(ErrorReporter.Default)
 
         //indicate that you want args --list x;y;z, where separator = ;
-        fun separator(separator: String): ListSpreadMode = SeparatorParseMode(separator).adapted()
+        fun separator(separator: String): ListSpreadMode = SeparatorParseMode(ErrorReporter.Default, separator)
 
         //indicate that you want to use a custom regex to split the list
         fun regex(regex: Regex, captureGroupName: String = "item"): ListSpreadMode = TODO()
     }
 }
 
-internal object Varargs : ListSpreadMode, ErrorReporting {
+class Varargs(override val errorReporter: ErrorReporter) : ListSpreadMode, ErrorReporting {
 
-    override val errorReporter = ErrorReporter.Default
+    override fun reduce(tokens: List<Token>): Pair<List<ListItemText>, List<Token>> = analyzing(tokens) {
 
-    override fun reduce(tokens: List<Token>): Pair<List<String>, List<Token>> = analyzing(tokens) {
-
-        var resultValues = emptyList<String>()
+        var resultValues = emptyList<ListItemText>()
 
         var current = next()
 
         while(current is Argument){
-            resultValues += current.text
+            resultValues += ListItemText(current, 0 .. current.length-1)
 
             if(isLastElement(rest())) break
 
@@ -46,21 +45,24 @@ internal object Varargs : ListSpreadMode, ErrorReporting {
     }
 }
 
-interface Simple {
-    fun spread(argumentText: String): List<String>
-}
+class SeparatorParseMode(
+        override val errorReporter: ErrorReporter,
+        val separator: String
+): ListSpreadMode, ErrorReporting {
 
-class SimpleParseModeAdapter(val simple: Simple): ListSpreadMode {
-    override fun reduce(tokens: List<Token>): Pair<List<String>, List<Token>> {
-        val argument = (tokens.firstOrNull() as? Argument)?.text ?: return emptyList<String>() to tokens
+    override fun reduce(tokens: List<Token>): Pair<List<ListItemText>, List<Token>> = analyzing(tokens){
 
-        return simple.spread(argument) to tokens.tail()
+        val argument = (next() as? Argument) ?: return emptyList<ListItemText>() to tokens
+
+        val results = argument.text.split(separator).fold(Pair(0, emptyList<ListItemText>())){ items, nextListItemText ->
+            val contentLowIndex = items.first
+            val contentHighIndex = contentLowIndex + nextListItemText.length - 1
+            val newOffset = contentLowIndex + separator.length + nextListItemText.length
+
+            Pair(newOffset, items.second + ListItemText(argument, contentLowIndex .. contentHighIndex))
+        }
+
+        return results.second to rest()
     }
-}
 
-class SeparatorParseMode(val separator: String): Simple {
-    override fun spread(argumentText: String): List<String> = argumentText.split(separator)
 }
-
-fun Simple.adapted() = SimpleParseModeAdapter(this)
-fun <T> List<T>.tail() = drop(1)

@@ -5,10 +5,10 @@ import kotlin.reflect.KProperty
 
 class ListOptionConfiguration<T: Any>(
         source: CLI,
-        optionType: KClass<T>,
-        converters: Converters,
+        val optionType: KClass<T>,
+        val converters: Converters,
         override val errorReporter: ErrorReporter,
-        private val userConfig: ListOptionConfiguration<T>.() -> Unit)
+        val userConfig: ListOptionConfiguration<T>.() -> Unit)
 : CommandLineOption<List<T>>, OptionParser {
 
     init { RegisteredOptions.optionProperties += source to this }
@@ -38,7 +38,7 @@ class ListOptionConfiguration<T: Any>(
     override fun reduce(tokens: List<Token>): List<Token> = analyzing(tokens){
 
         if ( ! nextIs<OptionPreambleToken>()) return tokens
-        if ( ! nextIs<OptionName>{ it.text in names() }) return tokens
+        if ( ! nextIs<OptionName> { it.text in names() }) return tokens
         if ( ! nextIs<SeparatorToken>()) return tokens
 
         val (splitItems, remainingTokens) = parseMode.reduce(rest())
@@ -47,9 +47,11 @@ class ListOptionConfiguration<T: Any>(
 
         resetTo(remainingTokens)
 
-        val parsedItems = splitItems.map { elementConverter.convert(it) }
+        val wrappedConverter = ErrorHandlingConverter(errorReporter, optionType){ elementConverter.convert(it) }
+        val parsedItems = splitItems.map { wrappedConverter.convert(it) }
 
-        value = parsedItems
+        value = parsedItems.filter { it.first }.map { it.second!! }
+        //TODO: Null value support: does `it.second as T` suffice?
 
         expect<SuperTokenSeparator>()
 

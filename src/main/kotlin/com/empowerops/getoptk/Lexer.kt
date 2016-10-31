@@ -80,3 +80,7 @@ data class OptionName(override val text: String): Token
 data class Argument(override val text: String): Token
 
 fun <T> T.asSingleList() = listOf(this)
+
+data class ListItemText(val parent: Token, val rangeInParent: IntRange): Token {
+    override val text: String get() = parent.text.substring(rangeInParent)
+}

@@ -28,7 +28,7 @@ inline fun <reified E: Any> CLI.getListOpt(noinline spec: ListOptionConfiguratio
         = getListOpt(this, spec, E::class)
 
 fun <T: Any> getOpt(cli: CLI, spec: ValueOptionConfiguration<T>.() -> Unit, type: KClass<T>)
-        = ValueOptionConfiguration(cli, type, ErrorReporter.Default, spec)
+        = ValueOptionConfiguration(cli, type, Converters(ErrorReporter.Default), ErrorReporter.Default, spec)
 
 fun CLI.getFlagOpt(spec: BooleanOptionConfiguration.() -> Unit = {})
         = BooleanOptionConfiguration(this, ErrorReporter.Default, spec)
