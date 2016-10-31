@@ -4,14 +4,11 @@ import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 
 class ListOptionConfiguration<T: Any>(
-        source: CLI,
         val optionType: KClass<T>,
         val converters: Converters,
         override val errorReporter: ErrorReporter,
-        val userConfig: ListOptionConfiguration<T>.() -> Unit)
-: CommandLineOption<List<T>>, OptionParser {
-
-    init { RegisteredOptions.optionProperties += source to this }
+        val userConfig: ListOptionConfiguration<T>.() -> Unit
+) : CommandLineOption<List<T>>, OptionParser {
 
     //name change to avoid confusion, user might want a "parse the whole value as a list"
     var elementConverter: Converter<T> = converters.getDefaultFor(optionType)
@@ -21,11 +18,11 @@ class ListOptionConfiguration<T: Any>(
     override lateinit var longName: String
 
     var parseMode: ListSpreadMode = ListSpreadMode.CSV
-    var required: Boolean = true
+    var required: Boolean = false
 
     internal lateinit var value: List<T>;
 
-    override operator fun getValue(thisRef: CLI, property: KProperty<*>): List<T> = value
+    override operator fun getValue(thisRef: CLI, property: KProperty<*>): List<T>? = value
 
     override fun finalizeInit(hostingProperty: KProperty<*>) {
         description = Inferred.generateInferredDescription(hostingProperty)

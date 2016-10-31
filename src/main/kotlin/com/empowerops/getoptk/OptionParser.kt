@@ -15,7 +15,7 @@ internal interface OptionParser: ErrorReporting {
     fun reduce(tokens: List<Token>): List<Token>
 }
 
-internal class AggregateParser(
+internal class TopLevelParser(
         override val errorReporter: ErrorReporter,
         val componentCombinators: List<OptionParser>
 ) : OptionParser {

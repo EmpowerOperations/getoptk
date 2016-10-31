@@ -27,12 +27,15 @@ inline fun <reified T: Any> CLI.getOpt(noinline spec: ValueOptionConfiguration<T
 inline fun <reified E: Any> CLI.getListOpt(noinline spec: ListOptionConfiguration<E>.() -> Unit = {})
         = getListOpt(this, spec, E::class)
 
-fun <T: Any> getOpt(cli: CLI, spec: ValueOptionConfiguration<T>.() -> Unit, type: KClass<T>)
-        = ValueOptionConfiguration(cli, type, Converters(ErrorReporter.Default), ErrorReporter.Default, spec)
-
 fun CLI.getFlagOpt(spec: BooleanOptionConfiguration.() -> Unit = {})
-        = BooleanOptionConfiguration(this, ErrorReporter.Default, spec)
+        = BooleanOptionConfiguration(ErrorReporter.Default, spec).registeredTo(this)
+
+fun <T: Any> getOpt(cli: CLI, spec: ValueOptionConfiguration<T>.() -> Unit, type: KClass<T>)
+        = ValueOptionConfiguration(type, Converters(ErrorReporter.Default), ErrorReporter.Default, spec).registeredTo(cli)
 
 fun <T: Any> getListOpt(cli: CLI, spec: ListOptionConfiguration<T>.() -> Unit, elementType: KClass<T>)
-        = ListOptionConfiguration(cli, elementType, Converters(ErrorReporter.Default), ErrorReporter.Default, spec)
+        = ListOptionConfiguration(elementType, Converters(ErrorReporter.Default), ErrorReporter.Default, spec).registeredTo(cli)
+
+
+private fun <T: OptionParser> T.registeredTo(cli: CLI): T = apply { RegisteredOptions.optionProperties += cli to this }
 

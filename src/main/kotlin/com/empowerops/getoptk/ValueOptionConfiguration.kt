@@ -4,14 +4,11 @@ import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 
 class ValueOptionConfiguration<T: Any>(
-        source: CLI,
         optionType: KClass<T>,
         private val converters: Converters,
         override val errorReporter: ErrorReporter,
         private val userConfig: ValueOptionConfiguration<T>.() -> Unit
 ) : CommandLineOption<T>, OptionParser {
-
-    init { RegisteredOptions.optionProperties += source to this }
 
     var converter: Converter<T> = converters.getDefaultFor(optionType)
 
@@ -26,7 +23,7 @@ class ValueOptionConfiguration<T: Any>(
 
     override operator fun getValue(thisRef: CLI, property: KProperty<*>): T{
         require(initialized) { "TODO: nice error message" }
-        return _value!! //uhh, how do I make this nullable iff user specified T as "String?" or some such?
+        return _value!!
     }
 
     override fun finalizeInit(hostingProperty: KProperty<*>) {

@@ -13,6 +13,7 @@ internal object RegisteredOptions {
     // also, should be a WeakHashMap or Map<WeakReference<CLI..., probably.
     // attempting to maintain that nice eager parsing property when KProperty is lazy is going to result in some odd code.
     val optionProperties: Multimap<CLI, OptionParser> = HashMultimap.create()
+
 }
 
 operator fun <K, V> Multimap<K, V>.plusAssign(pair: Pair<K, V>) { this.put(pair.first, pair.second) }

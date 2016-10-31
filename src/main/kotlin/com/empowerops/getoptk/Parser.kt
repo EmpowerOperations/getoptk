@@ -13,7 +13,7 @@ object Parser {
 
         var tokens = Lexer.lex(args)
 
-        val root = AggregateParser(errorReporter, opts)
+        val root = TopLevelParser(errorReporter, opts)
 
         tokens = root.reduce(tokens)
 
