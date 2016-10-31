@@ -23,9 +23,6 @@ object Parser {
 
         if (tokens.any()){ errorReporter.internalError(tokens.first(), "unconsumed tokens") }
 
-        //also recovery from fixed-point convergence on non-empty tokens
-        // (IE: there are unconsumed things in the args list)
-
         return result
     }
 
