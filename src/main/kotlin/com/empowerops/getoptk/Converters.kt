@@ -17,9 +17,13 @@ interface Converter<out T>{
 
 class Converters(val errorReporter: ErrorReporter) {
 
+    fun <T: Any> getConverterFor(type: KClass<T>) = tryFindingConverterFor(type) ?: InvalidConverter.apply {
+        errorReporter.reportConfigProblem("cannot convert to ${type.qualifiedName}")
+    }
+
     @Suppress("UNCHECKED_CAST", "IMPLICIT_CAST_TO_ANY") //unfortunately I'm moving from dynamic back into static types here.
             //AFAIK there is no way to tell kotlin that if type == Int::class, then T == Int
-    fun <T : Any> getDefaultFor(type: KClass<T>): Converter<T> = when {
+    fun <T: Any> tryFindingConverterFor(type: KClass<T>): Converter<T>? = when {
 
         type.hasStaticMethod("valueOf", returnType = type, paramTypes = listOf(String::class)) ->
             StaticMethodCallConverter(type, "valueOf")
@@ -41,24 +45,17 @@ class Converters(val errorReporter: ErrorReporter) {
         type == Char::class -> CharConverter
         type.java.isEnum -> EnumConverter(type.java as Class<Nothing>)
         //Nothing is a bottom type, only way I could think to satisfy the Enum<Enum<Enum...>>> problem
-
-        // bah, so this is called eagerly right now, meaning if I want to keep my nice readable source code
-        // then I need to convert the various config property classes to use
-        // `val parser by overridableLazy { getDefaultFor(T) }` maybe `lazyDefault`?
-        // hmm.
-        else -> errorReporter.reportConfigProblem("unable to find a strategy to convert options to ${type.qualifiedName}")
-    } as Converter<T>
-
-    companion object{
-
-    }
+        else -> null
+    } as Converter<T>?
 }
 
-
-object DoubleConverter: DelegatingConverter<Double>(String::toDouble)
-object FloatConverter: DelegatingConverter<Float>(String::toFloat)
-object IntConverter: DelegatingConverter<Int>(String::toInt)
-object LongConverter: DelegatingConverter<Long>(String::toLong)
+object InvalidConverter: Converter<Nothing>{
+    override fun convert(text: String) = throw UnsupportedOperationException("not implemented")
+}
+object DoubleConverter: DelegatingConverter<Double>(String::toDouble), Primative
+object FloatConverter: DelegatingConverter<Float>(String::toFloat), Primative
+object IntConverter: DelegatingConverter<Int>(String::toInt), Primative
+object LongConverter: DelegatingConverter<Long>(String::toLong), Primative
 object StringConverter: Converter<String>{ override fun convert(text: String) = text }
 object CharConverter: Converter<Char>{
     override fun convert(text: String): Char {
@@ -94,6 +91,7 @@ class CompanionMethodCallConverter<T: Any>(val type: KClass<T>, methodName: Stri
     override fun convert(text: String): T = type.java.cast(method.invoke(companionInstance, text))
 }
 
+interface Primative {}
 abstract class DelegatingConverter<T>(val convertActual: (String) -> T): Converter<T>{
     override fun convert(text: String): T = convertActual(text)
 }
@@ -113,12 +111,16 @@ fun KClass<*>.hasLocalMethod(name: String, returnType: KClass<*>, paramTypes: Li
 class ErrorHandlingConverter<T: Any>(
         val errorReporter: ErrorReporter,
         val type: KClass<T>,
-        val parser: (String) -> Any
+        val converter: Converter<Any>
 ){
-    fun convert(listItem: ListItemText): Pair<Boolean, T?> {
+    fun convert(listItem: Token): Pair<Boolean, T?> {
         return try {
-            val parsedValue: Any = parser(listItem.text)
-            true to type.java.cast(parsedValue)
+            val parsedValue: Any = converter.convert(listItem.text)
+            when(converter){
+                is Primative -> true to parsedValue as T //avoid boxing/unboxing issues
+                else -> true to type.java.cast(parsedValue)
+            }
+
         }
         catch(e: Exception) {
             errorReporter.reportParsingProblem(listItem, "failed to parse as $type: ${e.message}")

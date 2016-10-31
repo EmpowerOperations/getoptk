@@ -1,6 +1,7 @@
 package com.empowerops.getoptk
 
 import kotlin.reflect.KClass
+import kotlin.reflect.KProperty
 
 /**
  * Created by Geoff on 2016-10-26.
@@ -27,6 +28,9 @@ inline fun <reified T: Any> CLI.getOpt(noinline spec: ValueOptionConfiguration<T
 inline fun <reified E: Any> CLI.getListOpt(noinline spec: ListOptionConfiguration<E>.() -> Unit = {})
         = getListOpt(this, spec, E::class)
 
+inline fun <reified T: Any> CLI.getObjectOpt(noinline spec: ObjectOptionConfiguration<T>.() -> Unit = {})
+        = getObjectOpt(this, spec, T::class)
+
 fun CLI.getFlagOpt(spec: BooleanOptionConfiguration.() -> Unit = {})
         = BooleanOptionConfiguration(ErrorReporter.Default, spec).registeredTo(this)
 
@@ -35,6 +39,9 @@ fun <T: Any> getOpt(cli: CLI, spec: ValueOptionConfiguration<T>.() -> Unit, type
 
 fun <T: Any> getListOpt(cli: CLI, spec: ListOptionConfiguration<T>.() -> Unit, elementType: KClass<T>)
         = ListOptionConfiguration(elementType, Converters(ErrorReporter.Default), ErrorReporter.Default, spec).registeredTo(cli)
+
+fun <T: Any> getObjectOpt(cli: CLI, spec: ObjectOptionConfiguration<T>.() -> Unit, objectType: KClass<T>)
+        = ObjectOptionConfiguration(objectType, Converters(ErrorReporter.Default), ErrorReporter.Default, spec).registeredTo(cli)
 
 
 private fun <T: OptionParser> T.registeredTo(cli: CLI): T = apply { RegisteredOptions.optionProperties += cli to this }

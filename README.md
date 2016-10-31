@@ -43,6 +43,6 @@ TODO:
 - [ ] thread safety & removal of nasty static registry `...getoptk.RegisteredOptions`
 - [ ] data-class destructuring
 - [ ] `@configFile.txt` style load-arguments-from-file
-- [X] parser recovery (allign with next SupertokenSeparator boundary)
+- [X] converter recovery (allign with next SupertokenSeparator boundary)
 - [ ] documentation!
 - [ ] proper class visibilities, better class hierarchies

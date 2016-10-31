@@ -106,5 +106,35 @@ class UsageExample {
         val force by getFlagOpt()
     }
 
+    @Test fun `when using data class embedded in command line should properly read`(){
+        //setup
+        val args = arrayOf("--thingy", "bob", "1.234")
+
+        //act
+        val instance = args.parsedAs { ObjectHolder() }
+
+        //assert
+        assertThat(instance.thingy).isEqualTo(Thingy("bob", 1.234))
+    }
+    class ObjectHolder: CLI {
+        val thingy: Thingy by getObjectOpt()
+    }
+    data class Thingy(val name: String, val value: Double)
+
+    @Test fun `when using tree nested data classes should properly project and read`(){
+        //setup
+        val args = arrayOf("--thingyParent", "bob", "1.234", "2")
+
+        //act
+        val instance = args.parsedAs { TreeHolder() }
+
+        //assert
+        assertThat(instance.thingyParent).isEqualTo(ThingyParent(Thingy("bob", 1.234), 2))
+    }
+
+    class TreeHolder: CLI{
+        val thingyParent: ThingyParent by getObjectOpt()
+    }
+    data class ThingyParent(val thingy: Thingy, val factor: Int)
 }
 

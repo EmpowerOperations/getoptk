@@ -1,5 +1,7 @@
 package com.empowerops.getoptk
 
+import kotlin.reflect.KClass
+
 class Marker(
         val errorReporter: ErrorReporter,
         private var tokens: List<Token>
@@ -14,8 +16,8 @@ class Marker(
 
     fun next() = tokens[index++]
     fun hasNext() = index < tokens.size
-    fun current() = tokens[index]
-    fun peek() = tokens[index + 1]
+    fun current() = tokens[index - 1]
+    fun peek() = tokens[index]
     fun marked() = tokens.subList(0, (index).coerceAtMost(tokens.size))
     fun rest() = tokens.subList(index, tokens.size)
 
@@ -26,8 +28,12 @@ class Marker(
         }
     }
 
-    inline fun <reified T: Token> nextIs(noinline condition: (T) -> Boolean = { true })
-            = (next() as? T)?.run(condition) ?: false
+    inline fun <reified T: Token> nextIs(noinline condition: (T) -> Boolean = { true }) = nextIs(T::class, condition)
+
+    fun <T: Any> nextIs(type: KClass<T>, condition: (T) -> Boolean = { true }): Boolean{
+        val current = next()
+        return type.java.isInstance(current) && condition(current as T)
+    }
 
     fun resetTo(tokens: List<Token>){
         previouslyReadTokens += marked()

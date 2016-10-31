@@ -13,7 +13,7 @@ class ListOptionConfiguration<T: Any>(
     override fun toTokenGroupDescriptor() = "-$shortName|--$longName ${parseMode.toTokenGroupDescriptor()}"
 
     //name change to avoid confusion, user might want a "parse the whole value as a list"
-    var elementConverter: Converter<T> = converters.getDefaultFor(optionType)
+    var elementConverter: Converter<T> = converters.getConverterFor(optionType)
 
     override var description: String = ""
     override lateinit var shortName: String
@@ -45,7 +45,7 @@ class ListOptionConfiguration<T: Any>(
 
         resetTo(remainingTokens)
 
-        val wrappedConverter = ErrorHandlingConverter(errorReporter, optionType){ elementConverter.convert(it) }
+        val wrappedConverter = ErrorHandlingConverter(errorReporter, optionType, elementConverter)
         val parsedItems = splitItems.map { wrappedConverter.convert(it) }
 
         value = parsedItems.filter { it.first }.map { it.second!! }

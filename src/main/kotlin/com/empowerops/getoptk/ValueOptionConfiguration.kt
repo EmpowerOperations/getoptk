@@ -12,7 +12,7 @@ class ValueOptionConfiguration<T: Any>(
 
     override fun toTokenGroupDescriptor() = "-$shortName|--$longName <${optionType.simpleName}-arg>"
 
-    var converter: Converter<T> = converters.getDefaultFor(optionType)
+    var converter: Converter<T> = converters.getConverterFor(optionType)
 
     override lateinit var shortName: String
     override lateinit var longName: String
