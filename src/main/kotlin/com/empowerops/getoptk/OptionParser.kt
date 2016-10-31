@@ -15,25 +15,6 @@ internal interface OptionParser: ErrorReporting {
     fun reduce(tokens: List<Token>): List<Token>
 }
 
-internal inline fun <R> ErrorReporting.analyzing(tokens: List<Token>, block: Marker.() -> R): R {
-    with(Marker(errorReporter, tokens)){
-
-        val result: R = block()
-
-        errorReporter.debug {
-            """finished analysis
-              |tokens=$tokens
-              |caller=${this@analyzing}
-              |lastReadToken=${allReadTokens.lastOrNull()}
-              |allReadTokens=$allReadTokens
-              |result=$result
-              |consumedTokenCount=${allReadTokens.size}
-              """.trimMargin()
-        }
-        return result;
-    }
-}
-
 internal class AggregateParser(
         override val errorReporter: ErrorReporter,
         val componentCombinators: List<OptionParser>

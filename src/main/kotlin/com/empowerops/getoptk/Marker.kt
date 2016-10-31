@@ -9,16 +9,14 @@ class Marker(
     val allReadTokens: List<Token> get() = previouslyReadTokens + marked()
 
     var index = 0
-    lateinit var iterator: Iterator<Token>
 
     init { resetTo(tokens) }
 
     fun next(): Token {
-        index += 1
-        return iterator.next()
+        return tokens[index++]
     }
 
-    fun hasNext() = iterator.hasNext()
+    fun hasNext() = index < tokens.size
 
     fun current() = tokens[index]
     fun peek() = tokens[index + 1]
@@ -33,13 +31,36 @@ class Marker(
     inline fun <reified T: Token> nextIs(noinline condition: (T) -> Boolean = { true })
             = (next() as? T)?.run(condition) ?: false
 
-    fun marked(): List<Token> = tokens.subList(0, (index+1).coerceAtMost(tokens.size))
+    fun marked(): List<Token> = tokens.subList(0, (index).coerceAtMost(tokens.size))
     fun rest(): List<Token> = tokens.subList(index, tokens.size)
 
     fun resetTo(tokens: List<Token>){
         previouslyReadTokens += marked()
         this.tokens = tokens
-        iterator = tokens.iterator()
         index = 0
+    }
+}
+
+internal inline fun <R> ErrorReporting.analyzing(tokens: List<Token>, block: Marker.() -> R): R {
+
+    val marker = Marker(errorReporter, tokens)
+
+    try {
+        return marker.block()
+    }
+    finally {
+        log(marker, tokens)
+    }
+}
+
+private fun ErrorReporting.log(marker: Marker, tokens: List<Token>) {
+    errorReporter.debug {
+        """finished analysis
+          |tokens=$tokens
+          |caller=${this}
+          |lastReadToken=${marker.allReadTokens.lastOrNull()}
+          |allReadTokens=${marker.allReadTokens}
+          |consumedTokenCount=${marker.allReadTokens.size}
+          """.trimMargin()
     }
 }
