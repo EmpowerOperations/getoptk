@@ -86,7 +86,7 @@ class UsageExample {
     }
     class AnotherListImpl: CLI {
         val items: List<String> by getListOpt {
-            parseMode = ParseMode.varargs
+            parseMode = ListSpreadMode.varargs
         }
     }
 

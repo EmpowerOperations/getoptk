@@ -1,29 +1,29 @@
 package com.empowerops.getoptk
 
-interface ParseMode {
+interface ListSpreadMode {
 
     fun reduce(tokens: List<Token>): Pair<List<String>, List<Token>>
 
     companion object {
         //indicate that a list arg is --list x,y,z
-        val CSV: ParseMode = separator(",")
-
-        //indicate that a list arg is --list x --list y --list z
-        val iteratively: ParseMode = IterativeParseMode.adapted()
+        val CSV: ListSpreadMode = separator(",")
 
         //indicate that you want the args like --list x y z
-        val varargs: ParseMode = VarargsParseMode
+        val varargs: ListSpreadMode = Varargs
 
         //indicate that you want args --list x;y;z, where separator = ;
-        fun separator(separator: String): ParseMode = SeparatorParseMode(separator).adapted()
+        fun separator(separator: String): ListSpreadMode = SeparatorParseMode(separator).adapted()
 
         //indicate that you want to use a custom regex to split the list
-        fun regex(regex: Regex, captureGroupName: String = "item"): ParseMode = TODO()
+        fun regex(regex: Regex, captureGroupName: String = "item"): ListSpreadMode = TODO()
     }
 }
 
-object VarargsParseMode: ParseMode {
-    override fun reduce(tokens: List<Token>): Pair<List<String>, List<Token>> = with(Marker(tokens)) {
+internal object Varargs : ListSpreadMode, ErrorReporting {
+
+    override val errorReporter = ErrorReporter.Default
+
+    override fun reduce(tokens: List<Token>): Pair<List<String>, List<Token>> = analyzing(tokens) {
 
         var resultValues = emptyList<String>()
 
@@ -41,16 +41,16 @@ object VarargsParseMode: ParseMode {
         return resultValues to rest()
     }
 
-    private fun isLastElement(tokens: List<Token>): Boolean = with(Marker(tokens)){
+    private fun isLastElement(tokens: List<Token>): Boolean = analyzing(tokens){
         return nextIs<SuperTokenSeparator>() && (!hasNext() || next() !is Argument)
     }
 }
 
-interface SimpleParseMode {
+interface Simple {
     fun spread(argumentText: String): List<String>
 }
 
-class SimpleParseModeAdapter(val simple: SimpleParseMode): ParseMode {
+class SimpleParseModeAdapter(val simple: Simple): ListSpreadMode {
     override fun reduce(tokens: List<Token>): Pair<List<String>, List<Token>> {
         val argument = (tokens.firstOrNull() as? Argument)?.text ?: return emptyList<String>() to tokens
 
@@ -58,14 +58,9 @@ class SimpleParseModeAdapter(val simple: SimpleParseMode): ParseMode {
     }
 }
 
-class SeparatorParseMode(val separator: String): SimpleParseMode {
+class SeparatorParseMode(val separator: String): Simple {
     override fun spread(argumentText: String): List<String> = argumentText.split(separator)
 }
 
-object IterativeParseMode: SimpleParseMode {
-    override fun spread(argumentText: String): List<String> = listOf(argumentText)
-}
-
-
-fun SimpleParseMode.adapted() = SimpleParseModeAdapter(this)
+fun Simple.adapted() = SimpleParseModeAdapter(this)
 fun <T> List<T>.tail() = drop(1)

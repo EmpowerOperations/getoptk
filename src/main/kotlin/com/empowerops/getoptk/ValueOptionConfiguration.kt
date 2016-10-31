@@ -6,13 +6,14 @@ import kotlin.reflect.KProperty
 class ValueOptionConfiguration<T: Any>(
         source: CLI,
         optionType: KClass<T>,
+        private val converters: Converters,
         override val errorReporter: ErrorReporter,
         private val userConfig: ValueOptionConfiguration<T>.() -> Unit
-) : CommandLineOption<T>, OptionCombinator {
+) : CommandLineOption<T>, OptionParser {
 
     init { RegisteredOptions.optionProperties += source to this }
 
-    var converter: Converter<T> = Converters.getDefaultFor(optionType)
+    var converter: Converter<T> = converters.getDefaultFor(optionType)
 
     override lateinit var shortName: String
     override lateinit var longName: String

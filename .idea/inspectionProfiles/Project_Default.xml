@@ -9,7 +9,6 @@
       <option name="ignoreLocalVariables" value="false" />
       <option name="ignorePrivateMethodsAndFields" value="false" />
     </inspection_tool>
-    <inspection_tool class="DoubleNegation" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="FeatureEnvy" enabled="true" level="INFO" enabled_by_default="true">
       <option name="ignoreTestCases" value="false" />
     </inspection_tool>

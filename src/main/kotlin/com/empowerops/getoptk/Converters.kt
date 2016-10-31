@@ -59,9 +59,9 @@ abstract class DelegatingConverter<T>(val convertActual: (String) -> T): Convert
 
 class Converters(val errorReporter: ErrorReporter) {
 
-    @Suppress("UNCHECKED_CAST", "IMPLICIT_CAST_TO_ANY") //unfortunately I'm moving from dynamic back into static types here.
+//    @Suppress("UNCHECKED_CAST", "IMPLICIT_CAST_TO_ANY") //unfortunately I'm moving from dynamic back into static types here.
     //AFAIK there is no way to tell kotlin that if type == Int::class, then T == Int
-    inline fun <reified T : Any> getDefaultFor(type: KClass<T>): Converter<T> = when {
+    fun <T : Any> getDefaultFor(type: KClass<T>): Converter<T> = when {
 
         type.hasStaticMethod("valueOf", returnType = type, paramTypes = listOf(String::class)) -> StaticMethodCallConverter(type, "valueOf")
         type.companionObject?.hasLocalMethod("valueOf", returnType = type, paramTypes = listOf(String::class)) ?: false -> CompanionMethodCallConverter(type, "valueOf")
@@ -80,8 +80,12 @@ class Converters(val errorReporter: ErrorReporter) {
         // bah, so this is called eagerly right now, meaning if I want to keep my nice readable source code
         // then I need to convert the various config property classes to use `val parser by overridableLazy { getDefaultFor(T) }`
         // hmm.
-        else -> errorReporter.reportConfigProblem("")
-    } as Converter<T>
+        else -> errorReporter.reportConfigProblem(TODO())
+    }
+
+    companion object{
+
+    }
 
 }
 

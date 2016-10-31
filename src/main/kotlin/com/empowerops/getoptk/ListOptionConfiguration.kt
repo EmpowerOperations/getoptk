@@ -9,7 +9,7 @@ class ListOptionConfiguration<T: Any>(
         converters: Converters,
         override val errorReporter: ErrorReporter,
         private val userConfig: ListOptionConfiguration<T>.() -> Unit)
-: CommandLineOption<List<T>>, OptionCombinator {
+: CommandLineOption<List<T>>, OptionParser {
 
     init { RegisteredOptions.optionProperties += source to this }
 
@@ -20,7 +20,7 @@ class ListOptionConfiguration<T: Any>(
     override lateinit var shortName: String
     override lateinit var longName: String
 
-    var parseMode: ParseMode = ParseMode.CSV
+    var parseMode: ListSpreadMode = ListSpreadMode.CSV
     var required: Boolean = true
 
     internal lateinit var value: List<T>;

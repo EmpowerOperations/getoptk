@@ -13,7 +13,7 @@ object Parser {
 
         var tokens = Lexer.lex(args)
 
-        val root = AggregateCombinator(errorReporter, opts)
+        val root = AggregateParser(errorReporter, opts)
 
         tokens = root.reduce(tokens)
 
@@ -28,7 +28,7 @@ object Parser {
     internal fun <T : CLI> captureRegisteredOpts(
             errorReporter: ErrorReporter,
             hostFactory: () -> T
-    ): Pair<List<OptionCombinator>, T> {
+    ): Pair<List<OptionParser>, T> {
 
         val cmd = hostFactory()
 
@@ -64,6 +64,11 @@ class ErrorReporter {
 
     fun debug(message: () -> String){
         TODO(message())
+    }
+
+    companion object {
+
+        val Default: ErrorReporter = ErrorReporter()
     }
 
 }

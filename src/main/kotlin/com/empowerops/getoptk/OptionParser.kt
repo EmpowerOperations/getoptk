@@ -2,17 +2,24 @@ package com.empowerops.getoptk
 
 import kotlin.reflect.KProperty
 
-internal interface OptionCombinator {
-
+internal interface ErrorReporting {
     val errorReporter: ErrorReporter
+}
+
+internal interface OptionParser: ErrorReporting {
+
+    override val errorReporter: ErrorReporter
 
     fun finalizeInit(hostingProperty: KProperty<*>)
+
     fun reduce(tokens: List<Token>): List<Token>
 }
 
-internal inline fun <R> OptionCombinator.analyzing(tokens: List<Token>, block: Marker.() -> R): R {
+internal inline fun <R> ErrorReporting.analyzing(tokens: List<Token>, block: Marker.() -> R): R {
     with(Marker(errorReporter, tokens)){
+
         val result: R = block()
+
         errorReporter.debug {
             """finished analysis
               |tokens=$tokens
@@ -20,16 +27,17 @@ internal inline fun <R> OptionCombinator.analyzing(tokens: List<Token>, block: M
               |lastReadToken=${allReadTokens.lastOrNull()}
               |allReadTokens=$allReadTokens
               |result=$result
+              |consumedTokenCount=${allReadTokens.size}
               """.trimMargin()
         }
         return result;
     }
 }
 
-internal class AggregateCombinator(
+internal class AggregateParser(
         override val errorReporter: ErrorReporter,
-        val componentCombinators: List<OptionCombinator>
-) : OptionCombinator {
+        val componentCombinators: List<OptionParser>
+) : OptionParser {
 
     override fun finalizeInit(hostingProperty: KProperty<*>) = throw UnsupportedOperationException()
 

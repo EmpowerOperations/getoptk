@@ -6,7 +6,7 @@ class BooleanOptionConfiguration(
         source: CLI,
         override val errorReporter: ErrorReporter,
         private val userConfig: BooleanOptionConfiguration.() -> Unit
-): CommandLineOption<Boolean>, OptionCombinator {
+): CommandLineOption<Boolean>, OptionParser {
 
     init { RegisteredOptions.optionProperties += source to this }
 
