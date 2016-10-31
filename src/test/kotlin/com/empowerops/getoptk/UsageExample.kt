@@ -20,7 +20,7 @@ class UsageExample {
         assertThat(result).isEqualTo("Hello_getoptk!")
     }
     class SimpleImpl: CLI {
-        val helloString by getOpt<String>().notNull()
+        val helloString by getOpt<String>()
     }
 
 

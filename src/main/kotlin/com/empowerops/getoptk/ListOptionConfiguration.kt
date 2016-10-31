@@ -8,7 +8,9 @@ class ListOptionConfiguration<T: Any>(
         val converters: Converters,
         override val errorReporter: ErrorReporter,
         val userConfig: ListOptionConfiguration<T>.() -> Unit
-) : CommandLineOption<List<T>>, OptionParser {
+) : CommandLineOption<List<T>>(), OptionParser {
+
+    override fun toTokenGroupDescriptor() = "-$shortName|--$longName ${parseMode.toTokenGroupDescriptor()}"
 
     //name change to avoid confusion, user might want a "parse the whole value as a list"
     var elementConverter: Converter<T> = converters.getDefaultFor(optionType)
@@ -18,11 +20,10 @@ class ListOptionConfiguration<T: Any>(
     override lateinit var longName: String
 
     var parseMode: ListSpreadMode = ListSpreadMode.CSV
-    var required: Boolean = false
 
     internal lateinit var value: List<T>;
 
-    override operator fun getValue(thisRef: CLI, property: KProperty<*>): List<T>? = value
+    override operator fun getValue(thisRef: CLI, property: KProperty<*>): List<T> = value
 
     override fun finalizeInit(hostingProperty: KProperty<*>) {
         description = Inferred.generateInferredDescription(hostingProperty)

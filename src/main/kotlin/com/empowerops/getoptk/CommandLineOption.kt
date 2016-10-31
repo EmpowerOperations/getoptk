@@ -5,10 +5,12 @@ import kotlin.reflect.KProperty
 
 // this is really a marker interface, I put these members on it because I could,
 // but really it only exists for the implementation detail mentioned blow about `Map<CLI,
-interface CommandLineOption<out T: Any>: ReadOnlyProperty<CLI, T> {
-    val description: String
-    val shortName: String
-    val longName: String
+abstract class CommandLineOption<out T: Any>: ReadOnlyProperty<CLI, T> {
+    abstract val description: String
+    abstract val shortName: String
+    abstract val longName: String
+
+    abstract fun toTokenGroupDescriptor(): String
 }
 
 fun CommandLineOption<*>.names() = listOf(shortName, longName)

@@ -5,6 +5,8 @@ interface ListSpreadMode {
     //return value: left is a set of list item sub-tokens, right is the remaining unparsed tokens
     fun reduce(tokens: List<Token>): Pair<List<ListItemText>, List<Token>>
 
+    fun toTokenGroupDescriptor(): String
+
     companion object {
         //indicate that a list arg is --list x,y,z
         val CSV: ListSpreadMode = separator(",")
@@ -21,6 +23,8 @@ interface ListSpreadMode {
 }
 
 class Varargs(override val errorReporter: ErrorReporter) : ListSpreadMode, ErrorReporting {
+
+    override fun toTokenGroupDescriptor() = "[element1] [element2] [...]"
 
     override fun reduce(tokens: List<Token>): Pair<List<ListItemText>, List<Token>> = analyzing(tokens) {
 
@@ -49,6 +53,8 @@ class SeparatorParseMode(
         override val errorReporter: ErrorReporter,
         val separator: String
 ): ListSpreadMode, ErrorReporting {
+
+    override fun toTokenGroupDescriptor() = "[element1][${separator}element2] [...]"
 
     override fun reduce(tokens: List<Token>): Pair<List<ListItemText>, List<Token>> = analyzing(tokens){
 

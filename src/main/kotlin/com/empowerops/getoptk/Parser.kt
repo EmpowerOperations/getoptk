@@ -11,6 +11,10 @@ object Parser {
 
         val (opts, result) = captureRegisteredOpts(errorReporter, hostFactory)
 
+        validateNames(errorReporter, opts)
+
+        if(errorReporter.configurationErrors.any()) throw ConfigurationException(errorReporter.configurationErrors)
+
         var tokens = Lexer.lex(args)
 
         val root = TopLevelParser(errorReporter, opts)
@@ -23,6 +27,19 @@ object Parser {
         // (IE: there are unconsumed things in the args list)
 
         return result
+    }
+
+    private fun validateNames(errorReporter: ErrorReporter, opts: List<OptionParser>) {
+        val optionNamePairs: Map<String, List<CommandLineOption<*>>> = opts
+                .map { it as CommandLineOption<*> }
+                .flatMap { opt -> listOf("-${opt.shortName}" to opt, "--${opt.longName}" to opt) }
+                .groupBy { nameOptPair -> nameOptPair.first }
+                .mapValues { it -> it.value.map { it.second } }
+
+        for ((duplicateName, options) in optionNamePairs.filter { it.value.size >= 2 }) {
+            val optionNames = options.map { it.toTokenGroupDescriptor() }
+            errorReporter.reportConfigProblem("Name collision: $duplicateName maps to all of '${optionNames.joinToString("' and '")}'")
+        }
     }
 
     internal fun <T : CLI> captureRegisteredOpts(
@@ -44,6 +61,7 @@ object Parser {
             registered.finalizeInit(matchingProp)
         }
 
+
         return registeredOptions to cmd
     }
 }
@@ -55,7 +73,7 @@ class ErrorReporter {
     }
 
     fun reportConfigProblem(message: String){
-        println("config problem: $message")
+        configurationErrors += message
     }
 
     fun internalError(token: Token, errorMessage: String) {
@@ -66,9 +84,15 @@ class ErrorReporter {
 //        println("debug: ${message()}")
     }
 
-    companion object {
+    var configurationErrors: List<String> = emptyList()
+        private set;
 
+    companion object {
         val Default: ErrorReporter = ErrorReporter()
+
     }
 
 }
+
+class ConfigurationException(val messages: List<String>)
+: Exception((listOf("CLI configuration errors:") + messages).joinToString("\n"))

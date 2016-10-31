@@ -5,7 +5,9 @@ import kotlin.reflect.KProperty
 class BooleanOptionConfiguration(
         override val errorReporter: ErrorReporter,
         private val userConfig: BooleanOptionConfiguration.() -> Unit
-): CommandLineOption<Boolean>, OptionParser {
+): CommandLineOption<Boolean>(), OptionParser {
+
+    override fun toTokenGroupDescriptor() = "-$shortName|--$longName"
 
     override lateinit var description: String
 

@@ -4,11 +4,13 @@ import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 
 class ValueOptionConfiguration<T: Any>(
-        optionType: KClass<T>,
-        private val converters: Converters,
+        val optionType: KClass<T>,
+        val converters: Converters,
         override val errorReporter: ErrorReporter,
-        private val userConfig: ValueOptionConfiguration<T>.() -> Unit
-) : CommandLineOption<T>, OptionParser {
+        val userConfig: ValueOptionConfiguration<T>.() -> Unit
+) : CommandLineOption<T>(), OptionParser {
+
+    override fun toTokenGroupDescriptor() = "-$shortName|--$longName <${optionType.simpleName}-arg>"
 
     var converter: Converter<T> = converters.getDefaultFor(optionType)
 
@@ -18,8 +20,6 @@ class ValueOptionConfiguration<T: Any>(
 
     internal var initialized = false
     internal var _value: T? = null
-
-    override fun toString() = "--$longName <arg>"
 
     override operator fun getValue(thisRef: CLI, property: KProperty<*>): T{
         require(initialized) { "TODO: nice error message" }
