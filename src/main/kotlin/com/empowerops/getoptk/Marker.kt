@@ -16,8 +16,8 @@ class Marker(
 
     fun next() = tokens[index++]
     fun hasNext() = index < tokens.size
-    fun current() = tokens[index - 1]
-    fun peek() = tokens[index]
+    fun previous() = if(index == 0) Epsilon else tokens[index - 1]
+    fun peek() = if(index >= tokens.size) null else tokens[index]
     fun marked() = tokens.subList(0, (index).coerceAtMost(tokens.size))
     fun rest() = tokens.subList(index, tokens.size)
 
@@ -31,6 +31,7 @@ class Marker(
     inline fun <reified T: Token> nextIs(noinline condition: (T) -> Boolean = { true }) = nextIs(T::class, condition)
 
     fun <T: Any> nextIs(type: KClass<T>, condition: (T) -> Boolean = { true }): Boolean{
+        if ( ! hasNext()) return false
         val current = next()
         return type.java.isInstance(current) && condition(current as T)
     }
@@ -40,6 +41,8 @@ class Marker(
         this.tokens = tokens
         index = 0
     }
+
+    override fun toString() = "previous:${previous()}, rest:${rest()}"
 }
 
 internal inline fun <R> ErrorReporting.analyzing(tokens: List<Token>, block: Marker.() -> R): R {

@@ -2,11 +2,11 @@ package com.empowerops.getoptk
 
 import kotlin.reflect.KProperty
 
-internal interface ErrorReporting {
+interface ErrorReporting {
     val errorReporter: ErrorReporter
 }
 
-internal interface OptionParser: ErrorReporting {
+interface OptionParser: ErrorReporting {
 
     override val errorReporter: ErrorReporter
 
@@ -29,8 +29,11 @@ internal class TopLevelParser(
         do {
             val oldTokens = remainingTokens
 
-            remainingTokens = componentCombinators.fold(remainingTokens) { remaining, opt ->
-                if(remaining.any()) opt.reduce(remaining) else remaining
+            for(option in componentCombinators){
+
+                remainingTokens = option.reduce(remainingTokens)
+
+                if(remainingTokens.isEmpty()) break;
             }
 
             if(remainingTokens == oldTokens){
@@ -43,7 +46,8 @@ internal class TopLevelParser(
     }
 
     private fun recover(remainingTokens: List<Token>): List<Token> {
-        errorReporter.reportParsingProblem(remainingTokens.first(), "unrecognized option")
+        val unconsumedTokens = remainingTokens.takeWhile { it !is SuperTokenSeparator }.map { it.text }
+        errorReporter.internalError(remainingTokens.first(), "dropped tokens $unconsumedTokens")
         return remainingTokens.dropWhile { it !is SuperTokenSeparator }.drop(1)
     }
 

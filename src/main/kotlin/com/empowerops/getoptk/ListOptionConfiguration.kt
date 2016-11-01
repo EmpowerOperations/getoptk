@@ -21,7 +21,7 @@ class ListOptionConfiguration<T: Any>(
 
     var parseMode: ListSpreadMode = ListSpreadMode.CSV
 
-    internal lateinit var value: List<T>;
+    internal lateinit var value: List<T>
 
     override operator fun getValue(thisRef: CLI, property: KProperty<*>): List<T> = value
 
@@ -39,19 +39,46 @@ class ListOptionConfiguration<T: Any>(
         if ( ! nextIs<OptionName> { it.text in names() }) return tokens
         if ( ! nextIs<SeparatorToken>()) return tokens
 
-        val (splitItems, remainingTokens) = parseMode.reduce(rest())
+        val converter = converters.tryFindingConverterFor(optionType)
 
-        if (splitItems.isEmpty()) return tokens
+        value = if(converter != null){
+            val (splitItems, remainingTokens) = parseMode.reduce(rest())
 
-        resetTo(remainingTokens)
+            if (splitItems.isEmpty()) return tokens
 
-        val wrappedConverter = ErrorHandlingConverter(errorReporter, optionType, elementConverter)
-        val parsedItems = splitItems.map { wrappedConverter.convert(it) }
+            resetTo(remainingTokens)
 
-        value = parsedItems.filter { it.first }.map { it.second!! }
-        //TODO: Null value support: does `it.second as T` suffice?
+            val results = splitItems.map { itemToken ->
 
-        expect<SuperTokenSeparator>()
+                val wrappedConverter = ErrorHandlingConverter(errorReporter, optionType, elementConverter)
+
+                wrappedConverter.convert(itemToken).second!!
+            }
+
+            expect<SuperTokenSeparator>()
+
+            results
+        }
+        else {
+
+            var results: List<T> = emptyList()
+
+            while(peek() is Argument){
+
+                val reducer = RecursiveReducer(optionType, converters, errorReporter)
+
+                val (result, remaining) = reducer.reduce(rest())
+
+                resetTo(remaining)
+
+                if(result != null) {
+                    results += result
+                }
+                else break;
+            }
+
+            results
+        }
 
         return rest()
     }

@@ -56,6 +56,12 @@ object Lexer {
 //TODO add location info for debug messages
 interface Token { val text: String; val length: Int get() = text.length }
 
+object Epsilon: Token {
+    override val text = ""
+
+    override fun toString() = "[ε]"
+}
+
 abstract class Lemma(val Lemma: String): Token {
     override val length: Int get() = Lemma.length;
     override val text: String get() = Lemma

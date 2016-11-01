@@ -2,7 +2,8 @@ package com.empowerops.getoptk
 
 interface ListSpreadMode {
 
-    //return value: left is a set of list item sub-tokens, right is the remaining unparsed tokens
+    //return: left is a set of list item sub-tokens, right is the remaining unparsed tokens
+    // eg CSV.reduce(a,b,c --nextArg value ...) returns Pair(listOf("a", "b", "c"), listOf("--nextArg", "value"...)
     fun reduce(tokens: List<Token>): Pair<List<ListItemText>, List<Token>>
 
     fun toTokenGroupDescriptor(): String
@@ -45,7 +46,7 @@ class Varargs(override val errorReporter: ErrorReporter) : ListSpreadMode, Error
     }
 
     private fun isLastElement(tokens: List<Token>): Boolean = analyzing(tokens){
-        return nextIs<SuperTokenSeparator>() && (!hasNext() || next() !is Argument)
+        return nextIs<SuperTokenSeparator>() && ( ! hasNext() || next() !is Argument)
     }
 }
 

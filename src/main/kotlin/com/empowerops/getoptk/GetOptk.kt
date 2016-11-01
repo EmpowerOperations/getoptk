@@ -1,5 +1,7 @@
 package com.empowerops.getoptk
 
+import com.google.common.collect.HashMultimap
+import com.google.common.collect.Multimap
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 
@@ -14,13 +16,23 @@ import kotlin.reflect.KProperty
 interface CLI {
 
     companion object {
+
+        //so the behaviour here is wierd if hostFactory returns an already initialized instance
+        //do I want to commit to this flow & add error handling or do we want to use another scheme?
+
         fun <T: CLI> parse(args: Array<String>, hostFactory: () -> T): T
                 = Parser.parse(args.asIterable(), hostFactory)
+
+        fun <T: CLI> parse(args: Iterable<String>, hostFactory: () -> T): T
+                = Parser.parse(args, hostFactory)
+    }
+
+    interface LocalRegistration{
+        var registry: List<OptionParser>
     }
 }
 
 fun <T: CLI> Array<String>.parsedAs(hostFactory: () -> T): T = CLI.parse(this, hostFactory)
-
 
 inline fun <reified T: Any> CLI.getOpt(noinline spec: ValueOptionConfiguration<T>.() -> Unit = {})
         = getOpt(this, spec, T::class)
@@ -44,5 +56,10 @@ fun <T: Any> getObjectOpt(cli: CLI, spec: ObjectOptionConfiguration<T>.() -> Uni
         = ObjectOptionConfiguration(objectType, Converters(ErrorReporter.Default), ErrorReporter.Default, spec).registeredTo(cli)
 
 
-private fun <T: OptionParser> T.registeredTo(cli: CLI): T = apply { RegisteredOptions.optionProperties += cli to this }
+private fun <T: OptionParser> T.registeredTo(cli: CLI): T = apply {
+    when(cli){
+        is CLI.LocalRegistration -> cli.registry += this
+        else -> RegisteredOptions.optionProperties += cli to this
+    }
+}
 

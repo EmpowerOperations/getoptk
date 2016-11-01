@@ -34,7 +34,7 @@ class UsageExample {
         val helloStringResult = instance.helloString
         val oddString = instance.anotherString
 
-        //assert
+        //assertbu
         assertThat(helloStringResult).isEqualTo("Hello_getoptk!")
         assertThat(oddString).isEqualTo("weird")
     }
@@ -136,5 +136,34 @@ class UsageExample {
         val thingyParent: ThingyParent by getObjectOpt()
     }
     data class ThingyParent(val thingy: Thingy, val factor: Int)
+
+
+    @Test fun `when using list of domain objects should properly project and read`(){
+        //setup
+        val args = arrayOf("--things", "frodo", "8000", "sam", "9000")
+
+        //act
+        val instance = args.parsedAs { ListOfObjectsImpl() }
+
+        //assert
+        assertThat(instance.things).isEqualTo(listOf(Thingy("frodo", 8000.0), Thingy("sam", 9000.0)))
+    }
+    class ListOfObjectsImpl : CLI {
+        val things: List<Thingy> by getListOpt()
+    }
+
+    @Test fun `when using a list of tree like domain objects should properly parse`(){
+        //setup
+        val args = arrayOf("--things", "frodo", "8000", "1", "sam", "9000", "2")
+
+        //act
+        val instance = args.parsedAs { ListOfTreeObjectsImpl() }
+
+        //assert
+        assertThat(instance.things).isEqualTo(listOf(ThingyParent(Thingy("frodo", 8000.0), 1), ThingyParent(Thingy("sam", 9000.0), 2)))
+    }
+    class ListOfTreeObjectsImpl: CLI {
+        val things: List<ThingyParent> by getListOpt()
+    }
 }
 

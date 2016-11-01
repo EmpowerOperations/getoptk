@@ -123,7 +123,7 @@ class ErrorHandlingConverter<T: Any>(
 
         }
         catch(e: Exception) {
-            errorReporter.reportParsingProblem(listItem, "failed to parse as $type: ${e.message}")
+            errorReporter.reportParsingProblem(listItem, "expected ${type.simpleName}: ${e.message}")
             false to null
         }
     }

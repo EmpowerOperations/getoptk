@@ -7,7 +7,7 @@ object Parser {
 
     fun <T : CLI> parse(args: Iterable<String>, hostFactory: () -> T): T {
 
-        val errorReporter = ErrorReporter()
+        val errorReporter = ErrorReporter.Default
 
         val (opts, result) = captureRegisteredOpts(errorReporter, hostFactory)
 
@@ -23,6 +23,8 @@ object Parser {
 
         if (tokens.any()){ errorReporter.internalError(tokens.first(), "unconsumed tokens") }
 
+        if(errorReporter.parsingProblems.any()) throw ParseFailedException(errorReporter.parsingProblems)
+
         return result
     }
 
@@ -34,7 +36,7 @@ object Parser {
                 .mapValues { it -> it.value.map { it.second } }
 
         for ((duplicateName, options) in optionNamePairs.filter { it.value.size >= 2 }) {
-            val optionNames = options.map { it.toTokenGroupDescriptor() }
+            val optionNames = options.sortedBy { it.longName /*for reproducability*/ }.map { it.toTokenGroupDescriptor() }
             errorReporter.reportConfigProblem("Name collision: $duplicateName maps to all of '${optionNames.joinToString("' and '")}'")
         }
     }
@@ -47,9 +49,15 @@ object Parser {
         val cmd = hostFactory()
 
         val members = cmd.javaClass.kotlin.members.filterIsInstance<KProperty<*>>()
-        val registeredOptions = RegisteredOptions.optionProperties[cmd]!!.toList()
 
-        RegisteredOptions.optionProperties[cmd].clear()
+        val registeredOptions: List<OptionParser> = when(cmd){
+            is CLI.LocalRegistration -> cmd.registry
+            else -> RegisteredOptions.optionProperties[cmd].let {
+                val result: List<OptionParser> = it.toList()
+                it.clear()
+                result
+            }
+        }
 
         for (registered in registeredOptions) {
 
@@ -66,7 +74,7 @@ object Parser {
 class ErrorReporter {
 
     fun reportParsingProblem(token: Token, message: String){
-        println("parse failure at $token: $message")
+        parsingProblems += "at ${token.toLocationString()}: $message"
     }
 
     fun reportConfigProblem(message: String){
@@ -83,13 +91,20 @@ class ErrorReporter {
 
     var configurationErrors: List<String> = emptyList()
         private set;
+    var parsingProblems: List<String> = emptyList()
+        private set;
 
     companion object {
         val Default: ErrorReporter = ErrorReporter()
 
     }
 
+    fun Token.toLocationString(): String = "'$text'"
+
 }
 
 class ConfigurationException(val messages: List<String>)
 : Exception((listOf("CLI configuration errors:") + messages).joinToString("\n"))
+
+class ParseFailedException(val messages: List<String>)
+: Exception((listOf("Unrecognized option:") + messages).joinToString("\n"))
