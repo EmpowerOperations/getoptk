@@ -48,4 +48,47 @@ class ConfigurationErrorExamples {
             else -> throw ex
         }}
     }
+
+    //these are some notes I took I what I figured the error messages could/should look like
+    val wantedMErrorMessages = """
+
+whatever.exe --eh hello_world 1.0 -a another two 3.0
+at:                           ~~~
+expected Int for /ConfusedTypeArgBundle/eh[0]:A/x:Int
+java.lang.NumberFormatException: For input string: "1.0"
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+
+whatever.exe --eh hello_world 1.0 -e another two 3.0
+at:                                          ~~~
+expected Int for /ConfusedTypeArgBundle/eh[1]:A/x:Int
+java.lang.NumberFormatException: For input string: "two"
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+
+whatever.exe --eh hello_world 1.0 -e another two 3.0
+at:                                              ~~~
+unknown option '3.0'
+    java.lang.Exception:
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)[no ]
+
+---
+
+
+whatever.exe --eh hello_world 1.0 -e another two 3.0
+at:                           ~~~            ~~~ ~~~
+expected Int for /ConfusedTypeArgBundle/eh[0]:A/x:Int
+java.lang.NumberFormatException: For input string: "1.0"
+
+expected Int for /ConfusedTypeArgBundle/eh[1]:A/x:Int
+java.lang.NumberFormatException: For input string: "two"
+
+unknown option '3.0'
+java.lang.Exception
+
+"""
 }
