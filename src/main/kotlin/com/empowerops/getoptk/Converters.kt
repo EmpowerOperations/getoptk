@@ -122,8 +122,8 @@ class ErrorHandlingConverter<T: Any>(
             }
 
         }
-        catch(e: Exception) {
-            errorReporter.reportParsingProblem(listItem, "expected ${type.simpleName}: ${e.message}")
+        catch(ex: Exception) {
+            errorReporter.reportParsingProblem(listItem, "expected ${type.simpleName}. ($ex)")
             false to null
         }
     }

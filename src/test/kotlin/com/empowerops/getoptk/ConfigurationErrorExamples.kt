@@ -29,7 +29,7 @@ class ConfigurationErrorExamples {
         }
 
         //assert
-        assertThat(ex.messages).containsExactly("blam!")
+        assertThat(ex.messages).containsExactly("at '1.0': expected Int. (java.lang.NumberFormatException: For input string: \"1.0\")")
     }
 
     data class A(val name: String, val x: Int)

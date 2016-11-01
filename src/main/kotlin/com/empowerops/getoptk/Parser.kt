@@ -23,9 +23,16 @@ object Parser {
 
         if (tokens.any()){ errorReporter.internalError(tokens.first(), "unconsumed tokens") }
 
-        if(errorReporter.parsingProblems.any()) throw ParseFailedException(errorReporter.parsingProblems)
+        if(errorReporter.parsingProblems.any()){
+            printUsage()
+            throw ParseFailedException(errorReporter.parsingProblems)
+        }
 
         return result
+    }
+
+    private fun printUsage() {
+
     }
 
     private fun validateNames(errorReporter: ErrorReporter, opts: List<OptionParser>) {
