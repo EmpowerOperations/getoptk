@@ -102,7 +102,8 @@ class ErrorReporter {
         private set;
 
     companion object {
-        val Default: ErrorReporter = ErrorReporter()
+        var Default: ErrorReporter = ErrorReporter()
+            internal set;
 
     }
 

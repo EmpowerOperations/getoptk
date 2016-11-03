@@ -34,25 +34,25 @@ interface CLI {
 
 fun <T: CLI> Array<String>.parsedAs(hostFactory: () -> T): T = CLI.parse(this, hostFactory)
 
-inline fun <reified T: Any> CLI.getOpt(noinline spec: ValueOptionConfiguration<T>.() -> Unit = {})
-        = getOpt(this, spec, T::class)
+inline fun <reified T: Any> CLI.getValueOpt(noinline spec: ValueOptionConfiguration<T>.() -> Unit = {})
+        = getValueOpt(this, spec, T::class)
 
 inline fun <reified E: Any> CLI.getListOpt(noinline spec: ListOptionConfiguration<E>.() -> Unit = {})
         = getListOpt(this, spec, E::class)
 
-inline fun <reified T: Any> CLI.getObjectOpt(noinline spec: ObjectOptionConfiguration<T>.() -> Unit = {})
-        = getObjectOpt(this, spec, T::class)
+inline fun <reified T: Any> CLI.getOpt(noinline spec: ObjectOptionConfiguration<T>.() -> Unit = {})
+        = getOpt(this, spec, T::class)
 
 fun CLI.getFlagOpt(spec: BooleanOptionConfiguration.() -> Unit = {})
         = BooleanOptionConfiguration(ErrorReporter.Default, spec).registeredTo(this)
 
-fun <T: Any> getOpt(cli: CLI, spec: ValueOptionConfiguration<T>.() -> Unit, type: KClass<T>)
+fun <T: Any> getValueOpt(cli: CLI, spec: ValueOptionConfiguration<T>.() -> Unit, type: KClass<T>)
         = ValueOptionConfiguration(type, Converters(ErrorReporter.Default), ErrorReporter.Default, spec).registeredTo(cli)
 
 fun <T: Any> getListOpt(cli: CLI, spec: ListOptionConfiguration<T>.() -> Unit, elementType: KClass<T>)
         = ListOptionConfiguration(elementType, Converters(ErrorReporter.Default), ErrorReporter.Default, spec).registeredTo(cli)
 
-fun <T: Any> getObjectOpt(cli: CLI, spec: ObjectOptionConfiguration<T>.() -> Unit, objectType: KClass<T>)
+fun <T: Any> getOpt(cli: CLI, spec: ObjectOptionConfiguration<T>.() -> Unit, objectType: KClass<T>)
         = ObjectOptionConfiguration(objectType, Converters(ErrorReporter.Default), ErrorReporter.Default, spec).registeredTo(cli)
 
 

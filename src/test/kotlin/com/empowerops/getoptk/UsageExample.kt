@@ -1,12 +1,17 @@
 package com.empowerops.getoptk
 
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.Before
 import org.junit.Test
 
 /**
  * Created by Geoff on 2016-10-26.
  */
 class UsageExample {
+
+    @Before fun `apply new error reporter`(){
+        ErrorReporter.Default = ErrorReporter()
+    }
 
     @Test fun `when using usage example created initially should parse properly`(){
         //setup
@@ -20,7 +25,7 @@ class UsageExample {
         assertThat(result).isEqualTo("Hello_getoptk!")
     }
     class SimpleImpl: CLI {
-        val helloString by getOpt<String>()
+        val helloString by getValueOpt<String>()
     }
 
 
@@ -39,8 +44,8 @@ class UsageExample {
         assertThat(oddString).isEqualTo("weird")
     }
     class TwoFieldImpl: CLI {
-        val helloString: String by getOpt()
-        val anotherString: String by getOpt {
+        val helloString: String by getValueOpt()
+        val anotherString: String by getValueOpt {
             longName = "oddball"
             shortName = "o"
         }
@@ -117,7 +122,7 @@ class UsageExample {
         assertThat(instance.thingy).isEqualTo(Thingy("bob", 1.234))
     }
     class ObjectHolder: CLI {
-        val thingy: Thingy by getObjectOpt()
+        val thingy: Thingy by getOpt()
     }
     data class Thingy(val name: String, val value: Double)
 
@@ -133,7 +138,7 @@ class UsageExample {
     }
 
     class TreeHolder: CLI{
-        val thingyParent: ThingyParent by getObjectOpt()
+        val thingyParent: ThingyParent by getOpt()
     }
     data class ThingyParent(val thingy: Thingy, val factor: Int)
 

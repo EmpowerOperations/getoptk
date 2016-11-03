@@ -13,10 +13,10 @@ fun main(args: Array<String>){
 }
 
 class CLIConfig: CLI {
-  val alphaFactor: Double by getOpt()
+  val alphaFactor: Double by getValueOpt()
     //defaults are "-a" and "--alphaFactor", a default of 0.0, and a description that summarizes this  
     
-  val betaFactor: Int by getOpt {
+  val betaFactor: Int by getValueOpt {
     shortName = "e"      
     longName = "beta"
     description = "the number of people shouting from the rooftops"
