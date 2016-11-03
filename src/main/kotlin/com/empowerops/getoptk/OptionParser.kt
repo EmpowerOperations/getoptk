@@ -3,12 +3,12 @@ package com.empowerops.getoptk
 import kotlin.reflect.KProperty
 
 interface ErrorReporting {
-    val errorReporter: ErrorReporter
+    val errorReporter: ParseErrorReporter
 }
 
 interface OptionParser: ErrorReporting {
 
-    override val errorReporter: ErrorReporter
+    override var errorReporter: ParseErrorReporter
 
     fun finalizeInit(hostingProperty: KProperty<*>)
 
@@ -16,7 +16,7 @@ interface OptionParser: ErrorReporting {
 }
 
 internal class TopLevelParser(
-        override val errorReporter: ErrorReporter,
+        override var errorReporter: ParseErrorReporter,
         val componentCombinators: List<OptionParser>
 ) : OptionParser {
 

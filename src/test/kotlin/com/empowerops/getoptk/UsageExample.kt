@@ -9,16 +9,12 @@ import org.junit.Test
  */
 class UsageExample {
 
-    @Before fun `apply new error reporter`(){
-        ErrorReporter.Default = ErrorReporter()
-    }
-
     @Test fun `when using usage example created initially should parse properly`(){
         //setup
         val args = arrayOf("--helloString", "Hello_getoptk!")
 
         //act
-        val instance = args.parsedAs { SimpleImpl() }
+        val instance = args.parsedAs("prog") { SimpleImpl() }
         val result = instance.helloString
 
         //assert
@@ -35,7 +31,7 @@ class UsageExample {
         val args = arrayOf("--helloString", "Hello_getoptk!", "-o", "weird")
 
         //act
-        val instance = args.parsedAs { TwoFieldImpl() }
+        val instance = args.parsedAs("prog") { TwoFieldImpl() }
         val helloStringResult = instance.helloString
         val oddString = instance.anotherString
 
@@ -56,7 +52,7 @@ class UsageExample {
         val args = arrayOf("--helloString=Hello_getoptk!", "-o=weird")
 
         //act
-        val instance = args.parsedAs { TwoFieldImpl() }
+        val instance = args.parsedAs("prog") { TwoFieldImpl() }
         val helloStringResult = instance.helloString
         val oddString = instance.anotherString
 
@@ -70,7 +66,7 @@ class UsageExample {
         val args = arrayOf("--ints", "1,2,3")
 
         //act
-        val instance = args.parsedAs { ListImpl() }
+        val instance = args.parsedAs("prog") { ListImpl() }
 
         //assert
         assertThat(instance.ints).isEqualTo(listOf(1, 2, 3))
@@ -84,14 +80,14 @@ class UsageExample {
         val args = arrayOf("--items", "first", "second", "third", "fourth")
 
         //act
-        val instance = args.parsedAs { AnotherListImpl() }
+        val instance = args.parsedAs("prog") { AnotherListImpl() }
 
         //assert
         assertThat(instance.items).isEqualTo(listOf("first", "second", "third", "fourth"))
     }
     class AnotherListImpl: CLI {
         val items: List<String> by getListOpt {
-            parseMode = ListSpreadMode.varargs
+            parseMode = varargs
         }
     }
 
@@ -100,7 +96,7 @@ class UsageExample {
         val args = arrayOf("-f")
 
         //act
-        val instance = args.parsedAs { FlagImpl() }
+        val instance = args.parsedAs("prog") { FlagImpl() }
 
         //assert
         assertThat(instance.silent).isFalse()
@@ -116,7 +112,7 @@ class UsageExample {
         val args = arrayOf("--thingy", "bob", "1.234")
 
         //act
-        val instance = args.parsedAs { ObjectHolder() }
+        val instance = args.parsedAs("prog") { ObjectHolder() }
 
         //assert
         assertThat(instance.thingy).isEqualTo(Thingy("bob", 1.234))
@@ -131,7 +127,7 @@ class UsageExample {
         val args = arrayOf("--thingyParent", "bob", "1.234", "2")
 
         //act
-        val instance = args.parsedAs { TreeHolder() }
+        val instance = args.parsedAs("prog") { TreeHolder() }
 
         //assert
         assertThat(instance.thingyParent).isEqualTo(ThingyParent(Thingy("bob", 1.234), 2))
@@ -148,7 +144,7 @@ class UsageExample {
         val args = arrayOf("--things", "frodo", "8000", "sam", "9000")
 
         //act
-        val instance = args.parsedAs { ListOfObjectsImpl() }
+        val instance = args.parsedAs("prog") { ListOfObjectsImpl() }
 
         //assert
         assertThat(instance.things).isEqualTo(listOf(Thingy("frodo", 8000.0), Thingy("sam", 9000.0)))
@@ -162,7 +158,7 @@ class UsageExample {
         val args = arrayOf("--things", "frodo", "8000", "1", "sam", "9000", "2")
 
         //act
-        val instance = args.parsedAs { ListOfTreeObjectsImpl() }
+        val instance = args.parsedAs("prog") { ListOfTreeObjectsImpl() }
 
         //assert
         assertThat(instance.things).isEqualTo(listOf(ThingyParent(Thingy("frodo", 8000.0), 1), ThingyParent(Thingy("sam", 9000.0), 2)))

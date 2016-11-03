@@ -3,7 +3,7 @@ package com.empowerops.getoptk
 import kotlin.reflect.KProperty
 
 class BooleanOptionConfiguration(
-        override val errorReporter: ErrorReporter,
+        val configErrorReporter: ConfigErrorReporter,
         private val userConfig: BooleanOptionConfiguration.() -> Unit
 ): CommandLineOption<Boolean>(), OptionParser {
 
@@ -14,6 +14,7 @@ class BooleanOptionConfiguration(
     override lateinit var longName: String
     override lateinit var shortName: String
 
+    lateinit override var errorReporter: ParseErrorReporter
     internal var value: Boolean = false
 
     override operator fun getValue(thisRef: CLI, property: KProperty<*>): Boolean = value

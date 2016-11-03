@@ -10,7 +10,7 @@ class ConfigurationErrorExamples {
 
         //setup & act
         val ex = assertThrows<ConfigurationException> {
-            emptyArray<String>().parsedAs { DuplicateInferredNamesArgBundle() }
+            emptyArray<String>().parsedAs("prog") { DuplicateInferredNamesArgBundle() }
         }
 
         //assert
@@ -25,7 +25,7 @@ class ConfigurationErrorExamples {
 
         //setup & act
         val ex = assertThrows<ParseFailedException>{
-            arrayOf("--eh", "hello_world", "1.0").parsedAs { ConfusedTypeArgBundle() }
+            arrayOf("--eh", "hello_world", "1.0").parsedAs("prog") { ConfusedTypeArgBundle() }
         }
 
         //assert

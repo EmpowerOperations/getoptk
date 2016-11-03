@@ -6,12 +6,13 @@ import kotlin.reflect.KProperty
 class ObjectOptionConfiguration<T: Any>(
         val objectType: KClass<T>,
         val converters: Converters,
-        override val errorReporter: ErrorReporter,
+        val configErrorReporter: ConfigErrorReporter,
         val userConfig: ObjectOptionConfiguration<T>.() -> Unit
 ) : CommandLineOption<T>(), OptionParser, ErrorReporting {
 
-    private val reducer = RecursiveReducer(objectType, converters, errorReporter)
-    lateinit var value: T
+    override lateinit var errorReporter: ParseErrorReporter
+
+    internal lateinit var value: T
 
     override fun finalizeInit(hostingProperty: KProperty<*>) {
         description = Inferred.generateInferredDescription(hostingProperty)
@@ -29,6 +30,7 @@ class ObjectOptionConfiguration<T: Any>(
         if( ! nextIs<OptionName> { it.text in names() }) return tokens
         if( ! nextIs(SeparatorToken::class)) return tokens
 
+        val reducer = RecursiveReducer(objectType, converters, ConfigErrorReporter.Default, errorReporter)
         val (instance, reducedTokens) = reducer.reduce(rest())
 
         resetTo(reducedTokens)

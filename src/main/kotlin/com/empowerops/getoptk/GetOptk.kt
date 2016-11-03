@@ -20,11 +20,11 @@ interface CLI {
         //so the behaviour here is wierd if hostFactory returns an already initialized instance
         //do I want to commit to this flow & add error handling or do we want to use another scheme?
 
-        fun <T: CLI> parse(args: Array<String>, hostFactory: () -> T): T
-                = Parser.parse(args.asIterable(), hostFactory)
+        fun <T: CLI> parse(programName: String, args: Array<String>, hostFactory: () -> T): T
+                = Parser.parse(programName, args.asIterable(), hostFactory)
 
-        fun <T: CLI> parse(args: Iterable<String>, hostFactory: () -> T): T
-                = Parser.parse(args, hostFactory)
+        fun <T: CLI> parse(programName: String, args: Iterable<String>, hostFactory: () -> T): T
+                = Parser.parse(programName, args, hostFactory)
     }
 
     interface LocalRegistration{
@@ -32,7 +32,7 @@ interface CLI {
     }
 }
 
-fun <T: CLI> Array<String>.parsedAs(hostFactory: () -> T): T = CLI.parse(this, hostFactory)
+fun <T: CLI> Array<String>.parsedAs(programName: String, hostFactory: () -> T): T = CLI.parse(programName, this, hostFactory)
 
 inline fun <reified T: Any> CLI.getValueOpt(noinline spec: ValueOptionConfiguration<T>.() -> Unit = {})
         = getValueOpt(this, spec, T::class)
@@ -44,16 +44,16 @@ inline fun <reified T: Any> CLI.getOpt(noinline spec: ObjectOptionConfiguration<
         = getOpt(this, spec, T::class)
 
 fun CLI.getFlagOpt(spec: BooleanOptionConfiguration.() -> Unit = {})
-        = BooleanOptionConfiguration(ErrorReporter.Default, spec).registeredTo(this)
+        = BooleanOptionConfiguration(ConfigErrorReporter.Default, spec).registeredTo(this)
 
 fun <T: Any> getValueOpt(cli: CLI, spec: ValueOptionConfiguration<T>.() -> Unit, type: KClass<T>)
-        = ValueOptionConfiguration(type, Converters(ErrorReporter.Default), ErrorReporter.Default, spec).registeredTo(cli)
+        = ValueOptionConfiguration(type, Converters(ConfigErrorReporter.Default), ConfigErrorReporter.Default, spec).registeredTo(cli)
 
 fun <T: Any> getListOpt(cli: CLI, spec: ListOptionConfiguration<T>.() -> Unit, elementType: KClass<T>)
-        = ListOptionConfiguration(elementType, Converters(ErrorReporter.Default), ErrorReporter.Default, spec).registeredTo(cli)
+        = ListOptionConfiguration(elementType, Converters(ConfigErrorReporter.Default), ConfigErrorReporter.Default, spec).registeredTo(cli)
 
 fun <T: Any> getOpt(cli: CLI, spec: ObjectOptionConfiguration<T>.() -> Unit, objectType: KClass<T>)
-        = ObjectOptionConfiguration(objectType, Converters(ErrorReporter.Default), ErrorReporter.Default, spec).registeredTo(cli)
+        = ObjectOptionConfiguration(objectType, Converters(ConfigErrorReporter.Default), ConfigErrorReporter.Default, spec).registeredTo(cli)
 
 
 private fun <T: OptionParser> T.registeredTo(cli: CLI): T = apply {

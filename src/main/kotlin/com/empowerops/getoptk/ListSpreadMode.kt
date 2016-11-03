@@ -7,23 +7,21 @@ interface ListSpreadMode {
     fun reduce(tokens: List<Token>): Pair<List<ListItemText>, List<Token>>
 
     fun toTokenGroupDescriptor(): String
-
-    companion object {
-        //indicate that a list arg is --list x,y,z
-        val CSV: ListSpreadMode = separator(",")
-
-        //indicate that you want the args like --list x y z
-        val varargs: ListSpreadMode = Varargs(ErrorReporter.Default)
-
-        //indicate that you want args --list x;y;z, where separator = ;
-        fun separator(separator: String): ListSpreadMode = SeparatorParseMode(ErrorReporter.Default, separator)
-
-        //indicate that you want to use a custom regex to split the list
-        fun regex(regex: Regex, captureGroupName: String = "item"): ListSpreadMode = TODO()
-    }
 }
 
-class Varargs(override val errorReporter: ErrorReporter) : ListSpreadMode, ErrorReporting {
+//indicate that a list arg is --list x,y,z
+val OptionParser.CSV: ListSpreadMode get() = separator(",")
+
+//indicate that you want the args like --list x y z
+val OptionParser.varargs: ListSpreadMode get() = Varargs(this.errorReporter)
+
+//indicate that you want args --list x;y;z, where separator = ;
+fun OptionParser.separator(separator: String): ListSpreadMode = SeparatorParseMode(errorReporter, separator)
+
+//indicate that you want to use a custom regex to split the list
+fun OptionParser.regex(regex: Regex, captureGroupName: String = "item"): ListSpreadMode = TODO()
+
+class Varargs(override val errorReporter: ParseErrorReporter) : ListSpreadMode, ErrorReporting {
 
     override fun toTokenGroupDescriptor() = "[element1] [element2] [...]"
 
@@ -51,7 +49,7 @@ class Varargs(override val errorReporter: ErrorReporter) : ListSpreadMode, Error
 }
 
 class SeparatorParseMode(
-        override val errorReporter: ErrorReporter,
+        override val errorReporter: ParseErrorReporter,
         val separator: String
 ): ListSpreadMode, ErrorReporting {
 

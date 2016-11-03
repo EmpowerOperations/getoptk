@@ -3,7 +3,7 @@ package com.empowerops.getoptk
 import kotlin.reflect.KClass
 
 class Marker(
-        val errorReporter: ErrorReporter,
+        val errorReporter: ParseErrorReporter,
         private var tokens: List<Token>
 ){
 

@@ -6,7 +6,8 @@ import kotlin.reflect.KClass
 class RecursiveReducer<T: Any>(
         val objectType: KClass<T>,
         val converters: Converters,
-        override val errorReporter: ErrorReporter
+        val configErrorReporter: ConfigErrorReporter,
+        override val errorReporter: ParseErrorReporter
 ): ErrorReporting {
 
     private lateinit var constructor: Constructor<T>
@@ -16,7 +17,7 @@ class RecursiveReducer<T: Any>(
         val constructor = objectType.java.constructors.singleOrNull()
 
         if(constructor == null) {
-            errorReporter.reportConfigProblem("unable to find suitable constructor for ${objectType.qualifiedName}, it must have exactly 1 public constructor")
+            configErrorReporter.reportConfigProblem("unable to find suitable constructor for ${objectType.qualifiedName}, it must have exactly 1 public constructor")
         }
         else{
             this.constructor = @Suppress("UNCHECKED_CAST")(constructor as Constructor<T>)
@@ -58,10 +59,10 @@ class RecursiveReducer<T: Any>(
         return instance to rest()
     }
 
-    private fun <U: Any> recurse(converters: Converters, errorReporter: ErrorReporter, paramType: KClass<U>, tokens: List<Token>)
+    private fun <U: Any> recurse(converters: Converters, errorReporter: ParseErrorReporter, paramType: KClass<U>, tokens: List<Token>)
             : Pair<U?, List<Token>> {
 
-        val reducer = RecursiveReducer(paramType, converters, errorReporter)
+        val reducer = RecursiveReducer(paramType, converters, ConfigErrorReporter.Default, errorReporter)
         return reducer.reduce(tokens)
     }
 }

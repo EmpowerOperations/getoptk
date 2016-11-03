@@ -6,7 +6,7 @@ import kotlin.reflect.KProperty
 class ValueOptionConfiguration<T: Any>(
         val optionType: KClass<T>,
         val converters: Converters,
-        override val errorReporter: ErrorReporter,
+        val configErrorReporter: ConfigErrorReporter,
         val userConfig: ValueOptionConfiguration<T>.() -> Unit
 ) : CommandLineOption<T>(), OptionParser {
 
@@ -20,6 +20,7 @@ class ValueOptionConfiguration<T: Any>(
 
     internal var initialized = false
     internal var _value: T? = null
+    override lateinit var errorReporter: ParseErrorReporter
 
     override operator fun getValue(thisRef: CLI, property: KProperty<*>): T{
         require(initialized) { "TODO: nice error message" }

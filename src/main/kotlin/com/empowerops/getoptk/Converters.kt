@@ -15,7 +15,7 @@ interface Converter<out T>{
 }
 
 
-class Converters(val errorReporter: ErrorReporter) {
+class Converters(val errorReporter: ConfigErrorReporter) {
 
     fun <T: Any> getConverterFor(type: KClass<T>) = tryFindingConverterFor(type) ?: InvalidConverter.apply {
         errorReporter.reportConfigProblem("cannot convert to ${type.qualifiedName}")
@@ -109,7 +109,7 @@ fun KClass<*>.hasLocalMethod(name: String, returnType: KClass<*>, paramTypes: Li
         = getMethod(name, paramTypes)?.let { it.returnType == returnType.java }
 
 class ErrorHandlingConverter<T: Any>(
-        val errorReporter: ErrorReporter,
+        val errorReporter: ParseErrorReporter,
         val type: KClass<T>,
         val converter: Converter<Any>
 ){
@@ -123,7 +123,7 @@ class ErrorHandlingConverter<T: Any>(
 
         }
         catch(ex: Exception) {
-            errorReporter.reportParsingProblem(listItem, "expected ${type.simpleName}. ($ex)")
+            errorReporter.reportParsingProblem(listItem, "expected ${type.simpleName}", ex)
             false to null
         }
     }

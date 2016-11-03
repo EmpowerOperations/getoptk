@@ -6,7 +6,7 @@ import kotlin.reflect.KProperty
 class ListOptionConfiguration<T: Any>(
         val optionType: KClass<T>,
         val converters: Converters,
-        override val errorReporter: ErrorReporter,
+        val configErrorReporter: ConfigErrorReporter,
         val userConfig: ListOptionConfiguration<T>.() -> Unit
 ) : CommandLineOption<List<T>>(), OptionParser {
 
@@ -19,8 +19,9 @@ class ListOptionConfiguration<T: Any>(
     override lateinit var shortName: String
     override lateinit var longName: String
 
-    var parseMode: ListSpreadMode = ListSpreadMode.CSV
+    var parseMode: ListSpreadMode = CSV
 
+    override lateinit var errorReporter: ParseErrorReporter
     internal lateinit var value: List<T>
 
     override operator fun getValue(thisRef: CLI, property: KProperty<*>): List<T> = value
@@ -47,7 +48,7 @@ class ListOptionConfiguration<T: Any>(
 
             while(peek() is Argument){
 
-                val reducer = RecursiveReducer(optionType, converters, errorReporter)
+                val reducer = RecursiveReducer(optionType, converters, ConfigErrorReporter.Default, errorReporter)
 
                 val (result, remaining) = reducer.reduce(rest())
 
