@@ -37,9 +37,11 @@ object Lexer {
                     Argument(resultingTokenText, currentOffset).asSingleList()
                 }
             }
-
             currentOffset += resultingTokenText.length
-            tokens += SuperTokenSeparator(currentOffset)
+
+            val separator = SuperTokenSeparator(currentOffset)
+            tokens += separator
+            currentOffset += separator.length
         }
 
         return tokens
@@ -86,9 +88,8 @@ interface SeparatorToken : Token
 interface OptionPreambleToken: Token
 
 data class SuperTokenSeparator(val index: Int): SeparatorToken {
-    override val text = ""
-    override fun toString() = "[separator]"
-    override val location = index .. index
+    override val text = " "
+    override val location = index .. index + text.length -1
 }
 data class AssignmentSeparator(override val index: Int): Lemma, SeparatorToken { override val Lemma: String = "=" }
 
