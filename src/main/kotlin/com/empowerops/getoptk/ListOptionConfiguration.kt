@@ -39,27 +39,9 @@ class ListOptionConfiguration<T: Any>(
         if ( ! nextIs<OptionName> { it.text in names() }) return tokens
         if ( ! nextIs<SeparatorToken>()) return tokens
 
-        val converter = converters.tryFindingConverterFor(optionType)
+        val converter = elementConverter
 
-        value = if(converter != null){
-            val (splitItems, remainingTokens) = parseMode.reduce(rest())
-
-            if (splitItems.isEmpty()) return tokens
-
-            resetTo(remainingTokens)
-
-            val results = splitItems.map { itemToken ->
-
-                val wrappedConverter = ErrorHandlingConverter(errorReporter, optionType, converter)
-
-                wrappedConverter.convert(itemToken).second!!
-            }
-
-            expect<SuperTokenSeparator>()
-
-            results
-        }
-        else {
+        value = if (converter == null) {
 
             var results: List<T> = emptyList()
 
@@ -76,6 +58,24 @@ class ListOptionConfiguration<T: Any>(
                 }
                 else break;
             }
+
+            results
+        }
+        else {
+            val (splitItems, remainingTokens) = parseMode.reduce(rest())
+
+            if (splitItems.isEmpty()) return tokens
+
+            resetTo(remainingTokens)
+
+            val results = splitItems.map { itemToken ->
+
+                val wrappedConverter = ErrorHandlingConverter(errorReporter, optionType, converter)
+
+                wrappedConverter.convert(itemToken).second!!
+            }
+
+            expect<SuperTokenSeparator>()
 
             results
         }
