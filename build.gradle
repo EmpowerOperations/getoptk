@@ -1,20 +1,17 @@
-import java.nio.file.Paths
+
 
 buildscript {
-    ext.kotlin_version = '1.0.4'
+    ext.kotlin_version = '1.1.0'
 
     repositories {
         mavenCentral()
-        jcenter()
+        maven {
+            url 'http://dl.bintray.com/kotlin/kotlin-eap-1.1'
+        }
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
-}
-
-plugins {
-    // Add plugin https://plugins.gradle.org/plugin/net.ltgt.apt
-    id 'com.github.johnrengelman.shadow' version '1.2.3'
 }
 
 ext {
@@ -22,53 +19,34 @@ ext {
     targetCompatibility = 1.8
 }
 
-apply plugin: 'java'
 apply plugin: 'kotlin'
-apply plugin: 'kotlin-kapt'
-apply plugin: 'application'
 
 group 'com.empowerops'
 version '0.1-SNAPSHOT'
 
-mainClassName  = "com.empowerops.SingularityKt"
 def exeDir = "$buildDir/exe"
 
 dependencies {
     // https://mvnrepository.com/artifact/com.google.guava/guava
-    compile group: 'com.google.guava', name: 'guava', version: '19.0'
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    compile 'com.google.guava:guava:19.0'
+
     testCompile group: 'junit', name: 'junit', version: '4.11'
     testCompile 'org.assertj:assertj-core:3.5.2'
 
     // Add Dagger dependencies
-    compile 'com.google.dagger:dagger:2.7'
-    compile 'com.google.auto.factory:auto-factory:1.0-beta3'
-
-    kapt 'com.google.dagger:dagger-compiler:2.7'
-    kaptTest 'com.google.dagger:dagger-compiler:2.7'
+//    compile 'com.google.dagger:dagger:2.7'
 }
 
 repositories {
     mavenCentral()
-    jcenter()
-}
-
-sourceSets {
-    main {
-        java {
-            srcDir "${buildDir}/generated/source/kapt2/main"
-        }
-    }
-    test {
-        java {
-            srcDir "${buildDir}/generated/source/kapt2/main"
-            srcDir "${buildDir}/generated/source/kapt2/test"
-        }
+    maven {
+        url 'https://dl.bintray.com/kotlin/kotlin-eap-1.1'
     }
 }
-
-shadowJar {
-    baseName = 'getoptk'
-    classifier = null
-    version = project.version
+kotlin {
+    experimental {
+        coroutines "enable"
+    }
 }
