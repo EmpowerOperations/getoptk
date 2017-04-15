@@ -47,6 +47,36 @@ class ConfigurationErrorExamples {
         val eh: A by getOpt()
     }
 
+    @Test fun `when pasring type with valueOf method`(){
+        //setup
+        val args = arrayOf("--name", "bob")
+
+        //act
+        val ex = assertThrows<ParseFailedException> { args.parsedAs("prog") { ValueOfAbleCLI() } }
+
+        //assert
+        assertThat(ex.message).isEqualTo(
+                """Unrecognized option:
+                  |unknown option
+                  |prog --name bob
+                  |at:    ~~~~
+                  |java.lang.Exception
+                  |expected '-' or '--' or '/'
+                  |prog --name bob
+                  |at:         ~~~
+                  |java.lang.Exception
+                  """.trimMargin()
+        )
+    }
+    class ValueOfAbleCLI : CLI {
+        val parsable: ValueOfAble by getValueOpt()
+    }
+    data class ValueOfAble(val name: String) {
+        companion object {
+            fun valueOf(str: String) = ValueOfAble(str + "_thingy")
+        }
+    }
+
     inline private fun <reified X: Throwable> assertThrows(noinline callable: () -> Any): X {
         try {
             val result = callable()

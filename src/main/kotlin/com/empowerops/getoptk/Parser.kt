@@ -124,7 +124,10 @@ internal class Parser(
         val hasArgument = peek() is SeparatorToken && peek(1) is Argument
 
         val argumentList: ParseNode = when {
-            config == null -> ErrorNode
+            config == null -> {
+                errorReporter.reportParsingProblem(optName, "unknown option")
+                ErrorNode
+            };
             config is BooleanOptionConfiguration -> ArgumentListNode(emptyList())
 
             //when there's an argument:

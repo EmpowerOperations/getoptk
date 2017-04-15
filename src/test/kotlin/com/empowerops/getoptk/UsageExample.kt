@@ -165,11 +165,34 @@ class UsageExample {
         val instance = args.parsedAs("prog") { ListOfTreeObjectsImpl() }
 
         //assert
-        assertThat(instance.things).isEqualTo(listOf(ThingyParent(Thingy("frodo", 8000.0), 1), ThingyParent(Thingy("sam", 9000.0), 2)))
+        assertThat(instance.things).isEqualTo(listOf(
+                ThingyParent(Thingy("frodo", 8000.0), 1),
+                ThingyParent(Thingy("sam", 9000.0), 2)
+        ))
     }
     class ListOfTreeObjectsImpl: CLI {
         val things: List<ThingyParent> by getListOpt {
             parseMode = ImplicitObjects()
+        }
+    }
+
+
+    @Test fun `when pasring type with valueOf method`(){
+        //setup
+        val args = arrayOf("--name", "bob")
+
+        //act
+        val instance = args.parsedAs("prog") { ValueOfAbleCLI() }
+
+        //assert
+        assertThat(instance.name).isEqualTo(ValueOfAble("bob_thingy"))
+    }
+    class ValueOfAbleCLI : CLI {
+        val name: ValueOfAble by getValueOpt()
+    }
+    data class ValueOfAble(val nameImpl: String) {
+        companion object {
+            fun valueOf(str: String) = ValueOfAble(str + "_thingy")
         }
     }
 }

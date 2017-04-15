@@ -22,7 +22,7 @@ ext {
 apply plugin: 'kotlin'
 
 group 'com.empowerops'
-version '0.1-SNAPSHOT'
+version '0.2-SNAPSHOT'
 
 def exeDir = "$buildDir/exe"
 
