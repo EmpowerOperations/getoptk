@@ -1,17 +1,21 @@
-
-
 buildscript {
     ext.kotlin_version = '1.1.0'
 
     repositories {
         mavenCentral()
+        jcenter()
         maven {
             url 'http://dl.bintray.com/kotlin/kotlin-eap-1.1'
         }
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7.3'
     }
+}
+
+plugins {
+    id "com.jfrog.bintray" version "1.7.3"
 }
 
 ext {
@@ -19,7 +23,21 @@ ext {
     targetCompatibility = 1.8
 }
 
+apply plugin: 'com.jfrog.bintray'
 apply plugin: 'kotlin'
+
+bintray {
+    pkg {
+        repo = 'maven'
+        name = 'getoptk'
+        userOrg = 'groostav'
+        licenses = ['Apache-2.0']
+        vcsUrl = 'https://github.com/EmpowerOperations/getoptk'
+    }
+
+    user = bintrayUser
+    key = bintrayApiKey
+}
 
 group 'com.empowerops'
 version '0.2-SNAPSHOT'
