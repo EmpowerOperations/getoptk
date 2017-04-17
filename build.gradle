@@ -28,8 +28,9 @@ apply plugin: 'kotlin'
 
 bintray {
     pkg {
-        repo = 'maven'
-        name = 'getoptk'
+        //https://bintray.com/groostav/getotpk/com.empowerops.getoptk
+        repo = 'getoptk'
+        name = 'com.empowerops.getoptk'
         userOrg = 'groostav'
         licenses = ['Apache-2.0']
         vcsUrl = 'https://github.com/EmpowerOperations/getoptk'
