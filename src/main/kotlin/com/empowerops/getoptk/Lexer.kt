@@ -109,8 +109,9 @@ data class ShortPreamble(override val index: Int): Lemma, OptionPreambleToken { 
 data class LongPreamble(override val index: Int): Lemma, OptionPreambleToken { override val Lemma = "--"; }
 data class WindowsPreamble(override val index: Int): Lemma, OptionPreambleToken { override val Lemma = "/"; }
 
-data class ShortOptionName(override val text: String, override val index: Int): Word, Token { init { require(text.length == 1) } }
-data class LongOptionName(override val text: String, override val index: Int): Word, Token
+sealed class OptionName: Token {}
+data class ShortOptionName(override val text: String, override val index: Int): OptionName(), Word, Token { init { require(text.length == 1) } }
+data class LongOptionName(override val text: String, override val index: Int): OptionName(), Word, Token
 data class Argument(override val text: String, override val index: Int): Word, Token
 
 data class ListItemText(val parent: Token, val rangeInParent: IntRange): Token {

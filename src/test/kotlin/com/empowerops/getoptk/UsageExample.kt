@@ -20,7 +20,7 @@ class UsageExample {
         //assert
         assertThat(result).isEqualTo("Hello_getoptk!")
     }
-    class SimpleImpl: CLI {
+    class SimpleImpl: CLI(){
         val helloString by getValueOpt<String>()
     }
 
@@ -39,7 +39,7 @@ class UsageExample {
         assertThat(helloStringResult).isEqualTo("Hello_getoptk!")
         assertThat(oddString).isEqualTo("weird")
     }
-    class TwoFieldImpl: CLI {
+    class TwoFieldImpl: CLI(){
         val helloString: String by getValueOpt()
         val anotherString: String by getValueOpt {
             longName = "oddball"
@@ -71,7 +71,7 @@ class UsageExample {
         //assert
         assertThat(instance.ints).isEqualTo(listOf(1, 2, 3))
     }
-    class ListImpl: CLI {
+    class ListImpl: CLI(){
         val ints: List<Int> by getListOpt {
             parseMode = csv()
         }
@@ -87,7 +87,7 @@ class UsageExample {
         //assert
         assertThat(instance.items).isEqualTo(listOf("first", "second", "third", "fourth"))
     }
-    class AnotherListImpl: CLI {
+    class AnotherListImpl: CLI(){
         val items: List<String> by getListOpt<String> {
             parseMode = varargs()
         }
@@ -104,7 +104,7 @@ class UsageExample {
         assertThat(instance.silent).isFalse()
         assertThat(instance.force).isTrue()
     }
-    class FlagImpl: CLI {
+    class FlagImpl: CLI(){
         val silent by getFlagOpt()
         val force by getFlagOpt()
     }
@@ -119,7 +119,7 @@ class UsageExample {
         //assert
         assertThat(instance.thingy).isEqualTo(Thingy("bob", 1.234))
     }
-    class ObjectHolder: CLI {
+    class ObjectHolder: CLI(){
         val thingy: Thingy by getOpt()
     }
     data class Thingy(val name: String, val value: Double)
@@ -135,7 +135,7 @@ class UsageExample {
         assertThat(instance.thingyParent).isEqualTo(ThingyParent(Thingy("bob", 1.234), 2))
     }
 
-    class TreeHolder: CLI{
+    class TreeHolder: CLI() {
         val thingyParent: ThingyParent by getOpt()
     }
     data class ThingyParent(val thingy: Thingy, val factor: Int)
@@ -151,7 +151,7 @@ class UsageExample {
         //assert
         assertThat(instance.things).isEqualTo(listOf(Thingy("frodo", 8000.0), Thingy("sam", 9000.0)))
     }
-    class ListOfObjectsImpl : CLI {
+    class ListOfObjectsImpl : CLI(){
         val things: List<Thingy> by getListOpt {
             parseMode = ImplicitObjects()
         }
@@ -170,14 +170,14 @@ class UsageExample {
                 ThingyParent(Thingy("sam", 9000.0), 2)
         ))
     }
-    class ListOfTreeObjectsImpl: CLI {
+    class ListOfTreeObjectsImpl: CLI(){
         val things: List<ThingyParent> by getListOpt {
             parseMode = ImplicitObjects()
         }
     }
 
 
-    @Test fun `when pasring type with valueOf method`(){
+    @Test fun `when parsing type with valueOf method`(){
         //setup
         val args = arrayOf("--name", "bob")
 
@@ -187,7 +187,7 @@ class UsageExample {
         //assert
         assertThat(instance.name).isEqualTo(ValueOfAble("bob_thingy"))
     }
-    class ValueOfAbleCLI : CLI {
+    class ValueOfAbleCLI : CLI(){
         val name: ValueOfAble by getValueOpt()
     }
     data class ValueOfAble(val nameImpl: String) {
@@ -195,5 +195,73 @@ class UsageExample {
             fun valueOf(str: String) = ValueOfAble(str + "_thingy")
         }
     }
+
+    @Test fun `when parsing into statically available object should properly parse`(){
+        //setup
+        val args = arrayOf("-x", "1,2,3", "--something", "hello-objects")
+
+        //act
+        val instance = args.parsedAs("prog.exe") { StaticCLI }
+
+        //assert
+        assertThat(instance.something).isEqualTo("hello-objects")
+        assertThat(instance.nums).containsExactly(1, 2, 3)
+    }
+    object StaticCLI: CLI(){
+        val something: String by getValueOpt()
+
+        val nums: List<Int> by getListOpt{
+            shortName = "x"
+            parseMode = csv()
+        }
+    }
+
+    @Test fun `when parsing type with custom converter should properly convert`(){
+        //setup
+        val args = arrayOf("--name", "bob")
+
+        //act
+        val instance = args.parsedAs("prog") { ConvertableCLI() }
+
+        //assert
+        assertThat(instance.name).isEqualTo(ConvertableDataClass("got value 'bob'"))
+    }
+    class ConvertableCLI : CLI(){
+
+        val name: ConvertableDataClass by getValueOpt {
+            converter = { argText -> ConvertableDataClass("got value '$argText'") }
+        }
+    }
+    data class ConvertableDataClass(val nameImpl: String)
+
+    @Test fun `when parsing tee-shirt sizes with custom converter should properly convert`(){
+        val args = arrayOf("--beta", "XL")
+
+        //act
+        val instance = args.parsedAs("prog") { DemoUseCaseCLI() }
+
+        //assert
+        assertThat(instance.betaFactor).isEqualTo(4)
+    }
+
+    class DemoUseCaseCLI: CLI(){
+
+        val betaFactor: Int by getValueOpt {
+            shortName = "e"
+            longName = "beta"
+            description = "the group's average tee-shirt size"
+            converter = { argText ->
+                when (argText.toUpperCase()) {
+                    "S" -> 1
+                    "M" -> 2
+                    "L" -> 3
+                    "XL" -> 4
+                    "XXL" -> 5
+                    else -> 0
+                }
+            }
+        }
+    }
+
 }
 

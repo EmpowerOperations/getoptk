@@ -2,9 +2,14 @@ package com.empowerops.getoptk
 
 import com.google.common.collect.HashMultimap
 import com.google.common.collect.Multimap
+import org.stringtemplate.v4.Interpreter
+import org.stringtemplate.v4.ST
+import org.stringtemplate.v4.STGroupFile
+import org.stringtemplate.v4.misc.ObjectModelAdaptor
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
+import kotlin.reflect.jvm.internal.impl.utils.StringsKt
 
 /**
  * Created by Geoff on 2016-10-26.
@@ -16,22 +21,31 @@ import kotlin.reflect.KProperty
 /**
  * Marker interface for a class which is the result of parsing CLI arguments.
  */
-interface CLI {
+abstract class CLI {
+
+    //TODO: this should use reference equality on the CLI object.
+    internal var optionProperties: List<CommandLineOption<*>> = emptyList()
+    internal val errorReporter = ConfigErrorReporter()
 
     companion object {
 
         //so the behaviour here is wierd if hostFactory returns an already initialized instance
         //do I want to commit to this flow & add error handling or do we want to use another scheme?
 
-        fun <T: CLI> parse(programName: String, args: Array<String>, hostFactory: () -> T): T
-                = parse(programName, args.asIterable(), hostFactory)
+        fun <T: CLI> parse(programName: String, args: Array<String>, outputStream: Appendable = System.out, hostFactory: () -> T): T
+                = parse(programName, args.asIterable(), outputStream, hostFactory)
 
-        fun <T: CLI> parse(programName: String, args: Iterable<String>, hostFactory: () -> T): T {
+        fun <T: CLI> parse(programName: String, args: Iterable<String>, outputStream: Appendable = System.out, hostFactory: () -> T): T {
 
             val cmd = hostFactory()
 
-            val opts = RegisteredOptions.getOptions(cmd)
-            val configErrors = RegisteredOptions.getConfigErrorReporter(cmd).configurationErrors
+            var opts: List<CommandLineOption<*>> = cmd.optionProperties
+
+            if(opts.filterIsInstance<BooleanOptionConfiguration>().all { ! it.isHelp }) {
+                opts += makeHelpOption(opts).apply { applyAdditionalConfiguration(cmd, prop = null) }
+            }
+
+            val configErrors = cmd.errorReporter.configurationErrors
 
             if(configErrors.any()){
                 throw ConfigurationException(configErrors)
@@ -45,13 +59,59 @@ interface CLI {
 
             val root = parser.parseCLI(tokens)
 
-            ValueCreationVisitor(parseErrorReporter).apply { root.accept(this) }
+            root.accept(ValueCreationVisitor(parseErrorReporter))
 
+            if(parseErrorReporter.requestedHelp){
+                throw HelpException(makeHelpMessage(programName, cmd.optionProperties))
+            }
             if(parseErrorReporter.parsingProblems.any()){
-                throw ParseFailedException(parseErrorReporter.parsingProblems)
+                throw ParseFailedException(parseErrorReporter.parsingProblems, parseErrorReporter.firstException)
             }
 
             return cmd
+        }
+
+        private fun makeHelpMessage(programName: String, opts: List<CommandLineOption<*>>): String{
+            val stg = STGroupFile("com/empowerops/getoptk/HelpMessage.stg", "UTF-8").apply {
+                registerModelAdaptor(String::class.java, StringExtensionFunctionsAdapter)
+                registerModelAdaptor(CommandLineOption::class.java, OptionExtensionFunctionsAdapter)
+            }
+
+
+            val st = stg.getInstanceOf("helpMessage").apply {
+                add("programName", programName)
+                add("options", opts)
+            }
+
+            val result = st.render(80)
+
+            return result
+        }
+
+        object OptionExtensionFunctionsAdapter: ObjectModelAdaptor(){
+            override fun getProperty(interp: Interpreter?, self: ST, o: Any, property: Any, propertyName: String): Any? {
+                return if(o is CommandLineOption<*> && property == "fillTo30") with(o) {
+                    if(shortName == "" || longName == "" || ! hasArgument) TODO()
+                    val length = 30 - 1 - 1 - shortName.length - 1 - 2 - longName.length - 1 - 1 - argumentTypeDescription.length - 1
+                    return (0 until length).joinToString(separator = "") { " " }
+                }
+                else super.getProperty(interp, self, o, property, propertyName)
+            }
+        }
+        object StringExtensionFunctionsAdapter: ObjectModelAdaptor(){
+            override fun getProperty(interp: Interpreter?, self: ST, o: Any, property: Any, propertyName: String): Any? {
+                return when(property) {
+                    "chars" -> object : AbstractList<Char>() {
+                        override val size = (o as String).length
+                        override fun get(index: Int) = (o as String).get(index)
+                    }
+                    "wordsAndSpaces" -> {
+                        val allWords = (o as String).split(" ")
+                        return allWords.map { "$it " }.dropLast(1) + allWords.last()
+                    }
+                    else -> super.getProperty(interp, self, o, property, propertyName)
+                }
+            }
         }
     }
 }
@@ -60,8 +120,10 @@ interface CLI {
  * Parses the reciever string array (typically `args`) into the CLI instance
  * provided by calling the host factory
  */
-fun <T: CLI> Array<String>.parsedAs(programName: String, hostFactory: () -> T): T
-        = CLI.parse(programName, this, hostFactory)
+@Throws(ConfigurationException::class, ParseFailedException::class)
+
+fun <T: CLI> Array<String>.parsedAs(programName: String, outputStream: Appendable = System.out, hostFactory: () -> T): T
+        = CLI.parse(programName, this.asIterable(), outputStream, hostFactory)
 
 /**
  * Defines a value option type from the command line.

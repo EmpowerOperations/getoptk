@@ -12,5 +12,5 @@ interface ObjectOptionConfiguration<T>: ReadOnlyProperty<CLI, T> {
     fun <N: Any> registerConverter(type: KClass<N>, converter: Converter<N>): Unit
 }
 
-inline fun <reified N> ObjectOptionConfiguration<*>.registerConverter(converter: Converter<N>): Unit where N: Any
+inline fun <reified N> ObjectOptionConfiguration<*>.registerConverter(noinline converter: Converter<N>): Unit where N: Any
         = registerConverter(N::class, converter)

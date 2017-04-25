@@ -21,16 +21,16 @@ data class ImplicitObjects<T>(var converters: Map<KClass<*>, Converter<*>> = emp
     
     operator fun <U: Any> plus(converterByType: Pair<KClass<U>, Converter<U>>): ImplicitObjects<T>
             = ImplicitObjects(converters + converterByType)
-    inline operator fun <reified U: Any> plus (converter: Converter<U>): ImplicitObjects<T>
+    inline operator fun <reified U: Any> plus (noinline converter: Converter<U>): ImplicitObjects<T>
             = plus(U::class to converter)
 }
 
 // --things x,y,z
-inline fun <reified T: Any> csv(converter: Converter<T> = DefaultConverters[T::class] ?: InvalidConverter) = CSV(converter)
+inline fun <reified T: Any> csv(noinline converter: Converter<T> = DefaultConverters[T::class] ?: InvalidConverter) = CSV(converter)
 data class CSV<T>(val elementConverter: Converter<T>): ListSpreadMode<T>()
 
 // --things x y z
-inline fun <reified T: Any> varargs(converter: Converter<T> = DefaultConverters[T::class] ?: InvalidConverter) = Varargs(converter)
+inline fun <reified T: Any> varargs(noinline converter: Converter<T> = DefaultConverters[T::class] ?: InvalidConverter) = Varargs(converter)
 data class Varargs<T>(val elementConverter: Converter<T>) : ListSpreadMode<T>()
 
 //indicate that you want to use a custom regex to split the list

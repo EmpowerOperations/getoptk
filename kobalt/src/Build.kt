@@ -1,9 +1,8 @@
-import com.beust.kobalt.*
 import com.beust.kobalt.api.Project
-import com.beust.kobalt.plugin.application.*
-import com.beust.kobalt.plugin.kotlin.*
-import com.beust.kobalt.plugin.packaging.*
-import com.beust.kobalt.plugin.publish.*
+import com.beust.kobalt.plugin.packaging.assemble
+import com.beust.kobalt.plugin.publish.bintray
+import com.beust.kobalt.project
+import com.beust.kobalt.test
 import com.beust.kobalt.maven.Developer as KobaltDeveloper
 import org.apache.maven.model.Developer as PomDeveloper
 import org.apache.maven.model.License as PomLicense
@@ -25,10 +24,13 @@ val p = project {
                 "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version",
                 "com.google.guava:guava:19.0"
         )
+        compile("org.jetbrains.kotlin:kotlin-stdlib:1.1.1")
+        compile("org.antlr:ST4:4.0.8")
     }
 
     dependenciesTest {
         compile("junit:junit:4.11", "org.assertj:assertj-core:3.5.2")
+        compile("org.jetbrains.kotlin:kotlin-test:1.1.1")
     }
 
     assemble {
@@ -37,6 +39,16 @@ val p = project {
 
     bintray {
         publish = true
+    }
+
+    sourceDirectories {
+        path("src/main/string-template")
+    }
+
+    test {
+        include("**/*Fixture.class")
+        include("**/*Example.class")
+        include("**/*Examples.class")
     }
 }
 
