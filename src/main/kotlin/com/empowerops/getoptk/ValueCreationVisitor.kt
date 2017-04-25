@@ -88,10 +88,14 @@ internal class ValueCreationVisitor(val errorReporter: ParseErrorReporter) {
     }
     
     fun <T> Converter<T>.tryConvert(config: CommandLineOption<T>, token: Token): Any?
-            = try { this.convert(token.text) }
+            = try { this.invoke(token.text) }
             catch(ex: Exception) { reportError(token, ex, config); null }
 
     fun <T> UnrolledAndUntypedFactory<T>.tryMake(config: CommandLineOption<T>, args: List<Token>): Any?
             = try { this.make(args.map { it.text } ) }
-            catch(ex: Exception) { reportError(args.first(), ex, config) }
+            catch(ex: Exception) {
+                val token = (ex as? FactoryCreateFailed)?.index?.let { args[it] } ?: args.first()
+                val exActual = ((ex as? FactoryCreateFailed)?.cause ?: ex) as Exception
+                reportError(token, exActual, config)
+            }
 }

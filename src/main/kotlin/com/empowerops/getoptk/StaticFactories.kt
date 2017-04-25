@@ -34,15 +34,19 @@ class CompositeUnrolledAndUntypedFactory<out T>(val members: List<UnrolledAndUnt
         require(args.size == argCount)
 
         val argIterator = args.iterator()
-        var ctorParams: List<Any?> = emptyList()
+        var ctorArguments: List<Any?> = emptyList()
 
-        for(member in members){
+        for((index, member) in members.withIndex()){
             val memberParams = argIterator.asSequence().take(member.argCount)
 
-            ctorParams += member.make(memberParams.toList())
+            val nextArg = try { member.make(memberParams.toList()) }
+                    catch(ex: FactoryCreateFailed) { throw ex.apply { this.index += index } }
+                    catch(ex: Exception) { throw FactoryCreateFailed(index, ex) }
+
+            ctorArguments += nextArg
         }
 
-        val result = ctor.call(*ctorParams.toTypedArray())
+        val result = ctor.call(*ctorArguments.toTypedArray())
 
         return result;
     }
@@ -51,8 +55,10 @@ class CompositeUnrolledAndUntypedFactory<out T>(val members: List<UnrolledAndUnt
 
 }
 
+class FactoryCreateFailed(var index: Int, ex: Exception): RuntimeException(ex)
+
 class ComponentUnrolledAndUntypedFactory<out T>(val factory: Converter<T>): FactorySearchResult<T>(), UnrolledAndUntypedFactory<T>{
-    override fun make(args: List<String>): T = factory.convert(args.single())
+    override fun make(args: List<String>): T = factory.invoke(args.single())
     override val argCount = 1;
 }
 

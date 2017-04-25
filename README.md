@@ -8,7 +8,7 @@ _getoptk_ a command line parsing library for kotlin. It leverages standard conve
 A simple program using getoptk would be:
  
 ```kotlin
-class CustomerConfig: CLI {
+class CustomerConfig: CLI(){
   val firstName: String by getValueOpt()
   val lastName: String by getValueOpt()
   val age: Int by getValueOpt() 
@@ -36,16 +36,24 @@ first name: Bob, last name: Smith, age: 27
 Using the configuration & customization components of getoptk, we can accept more complicated command line arguments with more complicated parsing and converting techniques:
  
 ```kotlin
-class CLIConfig: CLI {
+class CLIConfig: CLI(){
   val alphaFactor: Double by getValueOpt()
     //defaults are "-a" and "--alphaFactor", a default of 0.0, and a description that summarizes this  
 
   val betaFactor: Int by getValueOpt {
     shortName = "e"      
     longName = "beta"
-    description = "the number of people shouting from the rooftops"
+    description = "the group's average tee-shirt size"
     default = 1
-    converter = MyCustomConverter() //(String) -> Int, arity must be exactly 1. 
+    converter = { argText ->
+      when(argText.toUpperCase()){
+        "S" -> 1
+        "M" -> 2
+        "L" -> 3
+        "XL" -> 4
+        else -> 0
+      }
+    } 
   }
 
   val customerNames: List<String> by getListOpt {

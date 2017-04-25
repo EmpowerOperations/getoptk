@@ -4,8 +4,6 @@ import com.sun.org.apache.xpath.internal.Arg
 import kotlin.coroutines.experimental.buildSequence
 
 
-interface ErrorReporting { val errorReporter: ParseErrorReporter }
-
 /**
  * simple recursive descent parser for command line
  *
@@ -19,10 +17,10 @@ interface ErrorReporting { val errorReporter: ParseErrorReporter }
  * -------------------- -> ----------
  * _start_              -> [parseCLI]
  * [parseCLI]           -> ( ([parseWindowsOption] OR [parseShortOption] OR [parseLongOption]) [SuperTokenSeparator])*
- * [parseWindowsOption] -> [WindowsPreamble] ([ShortOptionName] OR [LongOptionName]) [parseArgumentList]*
- * [parseShortOption]   -> [ShortPreamble] [ShortOptionName] [parseArgumentList]*
- * [parseLongOption]    -> [LongPreamble] [LongOptionName] [parseArgumentList]
- * [parseArgumentList]
+ * [parseWindowsOption] -> [WindowsPreamble] ([ShortOptionName] OR [LongOptionName]) [parseOptionsBackHalf]*
+ * [parseShortOption]   -> [ShortPreamble] [ShortOptionName] [parseOptionsBackHalf]*
+ * [parseLongOption]    -> [LongPreamble] [LongOptionName] [parseOptionsBackHalf]
+ * [parseOptionsBackHalf]
  *   -> [SeparatorToken] [Argument]
  *   -> ([SuperTokenSeparator] [Argument])*
  */
@@ -114,10 +112,10 @@ internal class Parser(
             : Pair<CommandLineOption<*>?, ParseNode> = analyzing(tokens){
 
         val config = componentCombinators.singleOrNull { optionSpec ->
-            when (optName) {
+            when (optName as? OptionName) {
                 is LongOptionName -> optName.text == optionSpec.longName
                 is ShortOptionName -> optName.text == optionSpec.shortName
-                else -> false
+                null -> false
             }
         }
 
@@ -125,9 +123,19 @@ internal class Parser(
 
         val argumentList: ParseNode = when {
             config == null -> {
-                errorReporter.reportParsingProblem(optName, "unknown option")
+                val problemOpt = optName.text
+                val available = componentCombinators.map { when(optName as? OptionName){
+                    is ShortOptionName -> it.shortName
+                    is LongOptionName -> it.longName
+                    null -> "???"
+                }}
+                errorReporter.reportParsingProblem(optName, "unknown option '$problemOpt', expected ${available.qcs}")
                 ErrorNode
-            };
+            }
+            config is BooleanOptionConfiguration && config.isHelp -> {
+                errorReporter.requestedHelp = true
+                ArgumentListNode(emptyList())
+            }
             config is BooleanOptionConfiguration -> ArgumentListNode(emptyList())
 
             //when there's an argument:
@@ -250,5 +258,8 @@ internal class Parser(
 
         return ErrorNode
     }
+
+    //quoted-comma-separated
+    val List<String>.qcs: String get() = joinToString { "'$it'" }
 }
 

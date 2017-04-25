@@ -12,9 +12,12 @@ internal sealed class CommandLineOption<out T>: ReadOnlyProperty<CLI, T>{
     lateinit var description: String
     lateinit var shortName: String
     lateinit var longName: String
+    lateinit var argumentTypeDescription: String
+
+    var hasArgument = true
 
     abstract val optionType: KClass<*>
-    abstract fun applyAdditionalConfiguration(thisRef: CLI, prop: KProperty<*>): Unit
+    abstract fun applyAdditionalConfiguration(thisRef: CLI, prop: KProperty<*>?): Unit
 
     fun provideDelegateImpl(thisRef: CLI, prop: KProperty<*>) {
 
@@ -23,18 +26,18 @@ internal sealed class CommandLineOption<out T>: ReadOnlyProperty<CLI, T>{
         shortName = Inferred.shortName(prop)
         longName = Inferred.longName(prop)
         description = Inferred.description(prop)
+        argumentTypeDescription = Inferred.argumentType(prop.returnType.classifier!! as KClass<*>)
 
         applyAdditionalConfiguration(thisRef, prop)
 
-        val cfg = RegisteredOptions.getConfigErrorReporter(thisRef)
-        cfg.validateNewEntry(RegisteredOptions.getOptions(thisRef), this)
+        thisRef.errorReporter.validateNewEntry(thisRef.optionProperties, this)
 
-        RegisteredOptions.addOption(thisRef, this)
+        thisRef.optionProperties += this
     }
 
     internal var value: Any? = UNINITIALIZED
     @Suppress("UNCHECKED_CAST") final override operator fun getValue(thisRef: CLI, property: KProperty<*>): T {
-        assert(value != UNINITIALIZED)
+        if(value != UNINITIALIZED) throw IllegalStateException("no value for ${this.toPropertyDescriptor()}")
 
         //TODO: is there anything stronger I can do to avoid pollution?
         //IIRC with thrown exceptions from `parseCLI`, there is no leakage of this object if the value is left unset.
@@ -73,7 +76,7 @@ internal fun CommandLineOption<*>.toPropertyDescriptor(): String {
 
     val getOptFlavour = when(this){
         is ValueOptionConfigurationImpl<*> -> "getValueOpt"
-        is BooleanOptionConfigurationImpl-> "getFlagOpt"
+        is BooleanOptionConfigurationImpl -> "getFlagOpt"
         is ListOptionConfigurationImpl<*> -> "getValueOpt"
         is ObjectOptionConfigurationImpl<*> -> "getValueOpt"
     }
@@ -81,14 +84,19 @@ internal fun CommandLineOption<*>.toPropertyDescriptor(): String {
     return "$valOrVarPrefix $name: $type by $getOptFlavour()"
 }
 
-internal class BooleanOptionConfigurationImpl(
+open internal class BooleanOptionConfigurationImpl(
         val userConfig: BooleanOptionConfiguration.() -> Unit
 ) : CommandLineOption<Boolean>(), BooleanOptionConfiguration {
 
     override lateinit var interpretation: FlagInterpretation
     override val optionType = Boolean::class
+    override var isHelp = false
 
-    override fun applyAdditionalConfiguration(thisRef: CLI, prop: KProperty<*>) {
+    init {
+        hasArgument = false
+    }
+
+    override fun applyAdditionalConfiguration(thisRef: CLI, prop: KProperty<*>?) {
 
         interpretation = FlagInterpretation.FLAG_IS_TRUE
 
@@ -101,6 +109,12 @@ internal class BooleanOptionConfigurationImpl(
     }
 }
 
+internal fun makeHelpOption(otherOptions: List<CommandLineOption<*>>) = BooleanOptionConfigurationImpl {
+    longName = "help"
+    shortName = "h"
+    isHelp = true
+}
+
 internal class ValueOptionConfigurationImpl<T: Any>(
         override val optionType: KClass<T>,
         val userConfig: ValueOptionConfiguration<T>.() -> Unit
@@ -108,7 +122,7 @@ internal class ValueOptionConfigurationImpl<T: Any>(
 
     override lateinit var converter: Converter<T>
 
-    override fun applyAdditionalConfiguration(thisRef: CLI, prop: KProperty<*>) {
+    override fun applyAdditionalConfiguration(thisRef: CLI, prop: KProperty<*>?) {
         converter = DefaultConverters[optionType] ?: InvalidConverter
 
         userConfig()
@@ -125,7 +139,7 @@ internal class ListOptionConfigurationImpl<E: Any>(
     var factoryOrErrors: FactorySearchResult<E>? = null
     var converter: Converter<E>? = null
 
-    override fun applyAdditionalConfiguration(thisRef: CLI, prop: KProperty<*>) {
+    override fun applyAdditionalConfiguration(thisRef: CLI, prop: KProperty<*>?) {
 
         parseMode = Varargs(DefaultConverters[optionType] ?: InvalidConverter)
 
@@ -153,7 +167,7 @@ internal class ObjectOptionConfigurationImpl<T: Any>(
         converters += type to converter
     }
 
-    override fun applyAdditionalConfiguration(thisRef: CLI, prop: KProperty<*>) {
+    override fun applyAdditionalConfiguration(thisRef: CLI, prop: KProperty<*>?) {
 
         userConfig()
 

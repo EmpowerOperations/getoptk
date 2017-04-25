@@ -33,7 +33,16 @@ data class ConfigurationProblem(val message: String, val stackTrace: Exception =
 
 class ParseErrorReporter(val programNamePrefix: String, val tokens: List<Token>) {
 
-    fun reportParsingProblem(token: Token, message: String, exception: Exception = Exception()){
+    var parsingProblems: List<String> = emptyList()
+        private set;
+
+    var firstException: Exception? = null
+
+    var requestedHelp: Boolean = false
+
+    fun reportParsingProblem(token: Token, message: String, exception: Exception? = null){
+        firstException = firstException ?: exception
+        
         val tokens = tokens.dropLastWhile { it is SuperTokenSeparator }
         val commandLine = programNamePrefix + " " + tokens.joinToString(separator = "") { it.text }
 
@@ -46,8 +55,8 @@ class ParseErrorReporter(val programNamePrefix: String, val tokens: List<Token>)
                 """$message
                   |$commandLine
                   |at:$superposition
-                  |$exception
-                  """.trimMargin()
+                  |${exception ?: ""}
+                  """.trimMargin().trim()
 
         parsingProblems += rendered
     }
@@ -58,16 +67,16 @@ class ParseErrorReporter(val programNamePrefix: String, val tokens: List<Token>)
     fun internalError(token: Token, errorMessage: String) {
         println("internal error at $token: $errorMessage")
     }
-
-    var parsingProblems: List<String> = emptyList()
-        private set;
 }
 
 class ConfigurationException(val messages: List<ConfigurationProblem>)
     : RuntimeException((listOf("CLI configuration errors:") + messages.map { it.toDescribedProblem() }).joinToString("\n"), messages.firstOrNull()?.stackTrace)
 
-class ParseFailedException(val messages: List<String>)
-    : RuntimeException((listOf("Unrecognized option:") + messages).joinToString("\n"))
-//todo: include a print usage
+class ParseFailedException(val messages: List<String>, cause: Exception?)
+    : RuntimeException(messages.joinToString("\n\n"), cause)
+
+class HelpException(message: String) : RuntimeException(message)
 
 class ConfigurationExceptionCause: RuntimeException("Configuration Exception")
+
+interface ErrorReporting { val errorReporter: ParseErrorReporter }

@@ -1,0 +1,11 @@
+helpMessage(programName, options) ::= <<
+usage: <programName>
+ <options:optionFormat(); separator="\n">
+>>
+
+optionFormat(opt) ::= <<<\\>
+  <if(opt.shortName)>-<opt.shortName><endif><\\>
+  <if(opt.longName)>,--<opt.longName><endif><\\>
+  <if(opt.hasArgument)> \<<opt.argumentTypeDescription>\><endif><\\>
+  <opt.fillTo30><opt.description.wordsAndSpaces; wrap="\n                               ">
+>>

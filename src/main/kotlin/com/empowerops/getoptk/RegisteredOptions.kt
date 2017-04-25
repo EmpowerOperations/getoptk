@@ -13,22 +13,20 @@ internal object RegisteredOptions {
     // also, should be a WeakHashMap or Map<WeakReference<CLI..., probably.
     // attempting to maintain that nice eager parsing property when KProperty is lazy is going to result in some odd code.
 
-    //TODO: this should use reference equality on the CLI object. 
-    private val optionProperties: Multimap<CLI, CommandLineOption<*>> = HashMultimap.create()
-    private val optionConfigErrors: MutableMap<CLI, ConfigErrorReporter> = hashMapOf()
-
-    fun addOption(cli: CLI, option: CommandLineOption<*>){
-        optionProperties.put(cli, option)
-    }
-
-    fun getOptions(cli: CLI): List<CommandLineOption<*>>
-            = optionProperties[cli]?.toList() ?: emptyList()
-
-
-    fun getConfigErrorReporter(cli: CLI): ConfigErrorReporter
-            = optionConfigErrors.getIfAbsentPut(cli) { ConfigErrorReporter() }
+//    //TODO: this should use reference equality on the CLI object.
+//    private val optionProperties: Multimap<CLI, CommandLineOption<*>> = HashMultimap.create()
+//    private val optionConfigErrors: MutableMap<CLI, ConfigErrorReporter> = hashMapOf()
+//
+//    fun addOption(cli: CLI, option: CommandLineOption<*>){
+//        optionProperties.put(cli, option)
+//    }
+//
+//    fun getOptions(cli: CLI): List<CommandLineOption<*>>
+//            = optionProperties[cli]?.toList() ?: emptyList()
+//
+//
+//    fun getConfigErrorReporter(cli: CLI): ConfigErrorReporter
+//            = optionConfigErrors.getIfAbsentPut(cli) { ConfigErrorReporter() }
 }
 
 operator fun <K, V> Multimap<K, V>.plusAssign(pair: Pair<K, V>) { this.put(pair.first, pair.second) }
-
-data class Problem(val superToken: String, val description: String, val location: IntRange, val trace: Exception? = null)
