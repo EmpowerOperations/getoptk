@@ -1,9 +1,11 @@
-# getoptk
+# getoptk #
 the most expressive command line parsing utility for kotlin
 
 _getoptk_ a command line parsing library for kotlin. It leverages standard conventions and a few kotlin-specific language features to reduce the amount of CLI boilerplate.
 
-## Getting Started
+_getoptk is still very much in flux, and looking for feedback. All APIs subject to change_
+
+## Getting Started ##
  
 A simple program using getoptk would be:
  
@@ -32,6 +34,45 @@ which would produce the output
 ```
 first name: Bob, last name: Smith, age: 27
 ```
+
+### Default Error Messages ###
+
+`getoptk` generates nice error messages out of the gate:
+
+```kt
+class SimpleHelpableOptionSet: CLI(){
+
+    val first: Double by getValueOpt {
+        description = "the first value that is to be tested"
+    }
+
+    val second: Int by getValueOpt {
+        description = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor " +
+                "incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis " +
+                "nostrud exercitation ullamco laboris nisi ut"
+
+        shortName = "sec"
+    }
+}
+```
+
+Running the standard `--help` (or `-h` or `/?`) flag will generate a standard Apache-CLI 80-column 
+usage description: 
+
+```cmd
+> prog.exe --help
+
+usage: prog.exe
+ -f,--first <decimal>         the first value that is to be tested
+ -sec,--second <int>          Lorem ipsum dolor sit amet, consectetur adipiscing
+                                elit, sed do eiusmod tempor incididunt ut labore
+                                et dolore magna aliqua. Ut enim ad minim veniam,
+                                quis nostrud exercitation ullamco laboris nisi ut
+```
+
+By default, all problems are thrown as exceptions, be it a configuration error (eg two options with the same name), parse error (eg "unrecognized option"), and help message request. This can be
+
+### Advanced Configuration ###
 
 Using the configuration & customization components of getoptk, we can accept more complicated command line arguments with more complicated parsing and converting techniques:
  
@@ -85,7 +126,7 @@ you can find more examples in the [Usage Examples](https://github.com/EmpowerOpe
 
 ## adding getoptk
 
-TBD: link to sonatype/maven central 
+get it from [JCenter](https://bintray.com/empower-operations-team/maven/getoptk)
 
 ```groovy
 compile "com.empowerops:getoptk:0.1"
