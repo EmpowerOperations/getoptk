@@ -74,6 +74,48 @@ class HelpOptionFixture {
             shortName = "sec"
         }
     }
+    @Test fun `when dealing with long names should still properly format`(){
+        val ex = assertThrows<HelpException> { arrayOf("--help").parsedAs("prog.exe") { HelpableOptionSetWithLongName() } }
+
+        assertThat(ex.message).isEqualTo("""
+              |usage: prog.exe
+              | -f,--first <decimal>         the first value that is to be tested
+              | -blargwargl,                 Lorem ipsum dolor sit amet, consectetur adipiscing${` `}
+              | --super-deduper-long-name      elit, sed do eiusmod tempor incididunt ut labore${` `}
+              | <decimal>                      et dolore magna aliqua. Ut enim ad minim veniam,${` `}
+              |                                quis nostrud exercitation ullamco laboris nisi ut${` `}
+              | -b,                          Surprisingly short description${` `}
+              | --super-deduper-deduper-real
+              | ly-long-name
+              | <decimal>
+              | -a,--a <int>
+            """.trimMargin().replace("\n", System.lineSeparator()).trim()
+        )
+    }
+
+    class HelpableOptionSetWithLongName: CLI(){
+
+        val first: Double by getValueOpt {
+            description = "the first value that is to be tested"
+        }
+
+        val superDeduperLongName: Double by getValueOpt {
+            description = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor " +
+                    "incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis " +
+                    "nostrud exercitation ullamco laboris nisi ut"
+
+            longName = "super-deduper-long-name"
+            shortName = "blargwargl"
+        }
+
+        val anotherSuperDeduperLongName: Int by getValueOpt {
+            description = "Surprisingly short description"
+            shortName = "b"
+            longName = "super-deduper-deduper-really-long-name"
+        }
+
+        val a: Int by getValueOpt()
+    }
 }
 
 

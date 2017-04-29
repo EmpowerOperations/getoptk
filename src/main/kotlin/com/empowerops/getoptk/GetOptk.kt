@@ -1,15 +1,10 @@
 package com.empowerops.getoptk
 
-import com.google.common.collect.HashMultimap
-import com.google.common.collect.Multimap
 import org.stringtemplate.v4.Interpreter
 import org.stringtemplate.v4.ST
 import org.stringtemplate.v4.STGroupFile
 import org.stringtemplate.v4.misc.ObjectModelAdaptor
-import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KClass
-import kotlin.reflect.KProperty
-import kotlin.reflect.jvm.internal.impl.utils.StringsKt
 
 /**
  * Created by Geoff on 2016-10-26.
@@ -18,9 +13,6 @@ import kotlin.reflect.jvm.internal.impl.utils.StringsKt
 // base class(ish) for JCommander-style "object with parsed arguments".
 // in this sense I figured it was easier to simply require the object to have a `getArgs`
 // than use some kind of reflective set call or factory or anything else.
-/**
- * Marker interface for a class which is the result of parsing CLI arguments.
- */
 abstract class CLI {
 
     //TODO: this should use reference equality on the CLI object.
@@ -32,10 +24,20 @@ abstract class CLI {
         //so the behaviour here is wierd if hostFactory returns an already initialized instance
         //do I want to commit to this flow & add error handling or do we want to use another scheme?
 
-        fun <T: CLI> parse(programName: String, args: Array<String>, outputStream: Appendable = System.out, hostFactory: () -> T): T
-                = parse(programName, args.asIterable(), outputStream, hostFactory)
+        fun <T: CLI> parse(
+                programName: String,
+                args: Array<String>,
+                altHandler: (SpecialCaseInterpretation) -> Unit = ::throwSpecialCase,
+                hostFactory: () -> T
+        ): T
+                = parse(programName, args.asIterable(), altHandler, hostFactory)
 
-        fun <T: CLI> parse(programName: String, args: Iterable<String>, outputStream: Appendable = System.out, hostFactory: () -> T): T {
+        fun <T: CLI> parse(
+                programName: String,
+                args: Iterable<String>,
+                altHandler: (SpecialCaseInterpretation) -> Unit = ::throwSpecialCase,
+                hostFactory: () -> T
+        ): T {
 
             val cmd = hostFactory()
 
@@ -48,7 +50,7 @@ abstract class CLI {
             val configErrors = cmd.errorReporter.configurationErrors
 
             if(configErrors.any()){
-                throw ConfigurationException(configErrors)
+                altHandler(ConfigurationFailure(configErrors))
             }
 
             val tokens = Lexer.lex(args)
@@ -62,10 +64,11 @@ abstract class CLI {
             root.accept(ValueCreationVisitor(parseErrorReporter))
 
             if(parseErrorReporter.requestedHelp){
-                throw HelpException(makeHelpMessage(programName, cmd.optionProperties))
+                val helpMessage = makeHelpMessage(programName, cmd.optionProperties)
+                altHandler(HelpRequested(helpMessage))
             }
             if(parseErrorReporter.parsingProblems.any()){
-                throw ParseFailedException(parseErrorReporter.parsingProblems, parseErrorReporter.firstException)
+                altHandler(ParseFailure(parseErrorReporter.parsingProblems))
             }
 
             return cmd
@@ -91,8 +94,19 @@ abstract class CLI {
         object OptionExtensionFunctionsAdapter: ObjectModelAdaptor(){
             override fun getProperty(interp: Interpreter?, self: ST, o: Any, property: Any, propertyName: String): Any? {
                 return if(o is CommandLineOption<*> && property == "fillTo30") with(o) {
-                    if(shortName == "" || longName == "" || ! hasArgument) TODO()
-                    val length = 30 - 1 - 1 - shortName.length - 1 - 2 - longName.length - 1 - 1 - argumentTypeDescription.length - 1
+                    var length = 30
+                    length -= 1
+                    if(shortName != ""){
+                        length -= (1 + shortName.length + 1)
+                    }
+                    if(longName != ""){
+                        length -= (2 + longName.length)
+                    }
+                    if(hasArgument){
+                        length -= (2 + argumentTypeDescription.length + 1)
+                    }
+
+//                    val length = 30 - 1 - 1 - shortName.length - 1 - 2 - longName.length - 1 - 1 - argumentTypeDescription.length - 1
                     return (0 until length).joinToString(separator = "") { " " }
                 }
                 else super.getProperty(interp, self, o, property, propertyName)
@@ -122,8 +136,8 @@ abstract class CLI {
  */
 @Throws(ConfigurationException::class, ParseFailedException::class)
 
-fun <T: CLI> Array<String>.parsedAs(programName: String, outputStream: Appendable = System.out, hostFactory: () -> T): T
-        = CLI.parse(programName, this.asIterable(), outputStream, hostFactory)
+fun <T: CLI> Array<String>.parsedAs(programName: String, altHandler: (SpecialCaseInterpretation) -> Unit = ::throwSpecialCase, hostFactory: () -> T): T
+        = CLI.parse(programName, this.asIterable(), altHandler, hostFactory)
 
 /**
  * Defines a value option type from the command line.
@@ -167,19 +181,29 @@ fun <T: Any> getListOpt(cli: CLI, spec: ListOptionConfiguration<T>.() -> Unit, e
 fun <T: Any> getOpt(cli: CLI, spec: ObjectOptionConfiguration<T>.() -> Unit, objectType: KClass<T>): ObjectOptionConfiguration<T>
         = ObjectOptionConfigurationImpl(objectType, spec)
 
-fun <H, T: Any> ReadOnlyProperty<H, T?>.notNull(): ReadOnlyProperty<H, T> = NotNullDelegatingProperty(this)
-fun <K, V> MutableMap<K, V>.getIfAbsentPut(key: K, ifAbsentFactory: () -> V): V {
-    if ( ! containsKey(key)){
-        val value = ifAbsentFactory()
-        put(key, value)
-        return value
-    }
-    else {
-        return get(key)!!
-    }
+sealed class SpecialCaseInterpretation
+data class ConfigurationFailure(val configurationProblems: List<ConfigurationProblem>) : SpecialCaseInterpretation()
+data class ParseFailure(val parseProblems: List<ParseProblem>) : SpecialCaseInterpretation()
+data class HelpRequested(val helpMessage: String) : SpecialCaseInterpretation()
+
+fun throwSpecialCase(specialCase: SpecialCaseInterpretation): Nothing = when(specialCase){
+    is ConfigurationFailure -> throw ConfigurationException(specialCase.configurationProblems)
+    is ParseFailure -> throw ParseFailedException(
+            specialCase.parseProblems.map { it.message },
+            specialCase.parseProblems.firstOrNull { it.stackTrace != null}?.stackTrace
+    )
+    is HelpRequested -> throw HelpException(specialCase.helpMessage)
 }
 
-class NotNullDelegatingProperty<H, T: Any>(val delegate: ReadOnlyProperty<H, T?>): ReadOnlyProperty<H, T> {
-    override fun getValue(thisRef: H, property: KProperty<*>): T = delegate.getValue(thisRef, property)!!
+fun ignoreUnrecognized(specialCase: SpecialCaseInterpretation): Unit = when(specialCase){
+    is ConfigurationFailure -> throw ConfigurationException(specialCase.configurationProblems)
+    is ParseFailure -> {
+        val recognizedParseFailures = specialCase.parseProblems.filter { "unknown option " !in it.message }
+        if(recognizedParseFailures.any()) throw ParseFailedException(
+                recognizedParseFailures.map { it.message },
+                recognizedParseFailures.firstOrNull { it.stackTrace != null }?.stackTrace
+        )
+        else Unit
+    }
+    is HelpRequested -> throw HelpException(specialCase.helpMessage)
 }
-

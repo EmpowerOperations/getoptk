@@ -110,8 +110,8 @@ open internal class BooleanOptionConfigurationImpl(
 }
 
 internal fun makeHelpOption(otherOptions: List<CommandLineOption<*>>) = BooleanOptionConfigurationImpl {
-    longName = "help"
-    shortName = "h"
+    longName = if(otherOptions.any { it.longName == "help" }) "" else "help"
+    shortName = if(otherOptions.any { it.shortName == "h" }) "" else "h"
     isHelp = true
 }
 

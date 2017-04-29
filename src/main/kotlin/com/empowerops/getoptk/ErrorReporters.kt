@@ -4,6 +4,18 @@ package com.empowerops.getoptk
  * Created by Geoff on 2017-03-09.
  */
 
+
+data class ConfigurationProblem(val message: String, val stackTrace: Exception = ConfigurationExceptionCause()){
+
+    fun toDescribedProblem(): String {
+        val relevantFrame = stackTrace.stackTrace.firstOrNull() //TODO: make this point at the specific line.
+        // problem is its a caller of an inline function
+        return "$message\n\tspecified $relevantFrame"
+    }
+}
+
+data class ParseProblem(val message: String, val stackTrace: Exception?)
+
 class ConfigErrorReporter(){
 
     fun reportConfigProblem(message: String){
@@ -22,26 +34,14 @@ class ConfigErrorReporter(){
         private set;
 }
 
-data class ConfigurationProblem(val message: String, val stackTrace: Exception = ConfigurationExceptionCause()){
-
-    fun toDescribedProblem(): String {
-        val relevantFrame = stackTrace.stackTrace.firstOrNull() //TODO: make this point at the specific line.
-        // problem is its a caller of an inline function
-        return "$message\n\tspecified $relevantFrame"
-    }
-}
-
 class ParseErrorReporter(val programNamePrefix: String, val tokens: List<Token>) {
 
-    var parsingProblems: List<String> = emptyList()
+    var parsingProblems: List<ParseProblem> = emptyList()
         private set;
-
-    var firstException: Exception? = null
 
     var requestedHelp: Boolean = false
 
     fun reportParsingProblem(token: Token, message: String, exception: Exception? = null){
-        firstException = firstException ?: exception
         
         val tokens = tokens.dropLastWhile { it is SuperTokenSeparator }
         val commandLine = programNamePrefix + " " + tokens.joinToString(separator = "") { it.text }
@@ -58,7 +58,7 @@ class ParseErrorReporter(val programNamePrefix: String, val tokens: List<Token>)
                   |${exception ?: ""}
                   """.trimMargin().trim()
 
-        parsingProblems += rendered
+        parsingProblems += ParseProblem(rendered, exception)
     }
 
     fun debug(message: () -> String){
@@ -78,5 +78,6 @@ class ParseFailedException(val messages: List<String>, cause: Exception?)
 class HelpException(message: String) : RuntimeException(message)
 
 class ConfigurationExceptionCause: RuntimeException("Configuration Exception")
+class ParseExceptionCause: RuntimeException("Parse Exception")
 
 interface ErrorReporting { val errorReporter: ParseErrorReporter }

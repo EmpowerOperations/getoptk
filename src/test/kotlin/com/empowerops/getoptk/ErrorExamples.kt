@@ -58,13 +58,9 @@ class ErrorExamples {
 
         //assert
         assertThat(ex.message).isEqualTo(
-                """unknown option 'name', expected 'parsable'
+                """unknown option 'name', expected 'parsable', 'help'
                   |prog --name bob
                   |at:    ~~~~
-                  |
-                  |expected '-' or '--' or '/'
-                  |prog --name bob
-                  |at:         ~~~
                   """.trimMargin()
         )
     }

@@ -21,8 +21,9 @@ import kotlin.coroutines.experimental.buildSequence
  * [parseShortOption]   -> [ShortPreamble] [ShortOptionName] [parseOptionsBackHalf]*
  * [parseLongOption]    -> [LongPreamble] [LongOptionName] [parseOptionsBackHalf]
  * [parseOptionsBackHalf]
- *   -> [SeparatorToken] [Argument]
- *   -> ([SuperTokenSeparator] [Argument])*
+ *   -> {config is ValueOptionConfiguration}?[SeparatorToken] [Argument]
+ *   -> {config is ListOptionConfiguration}?[parseObjectArgList]|[parseVarargsList]|[parseCSVArgList]
+ *   -> {config is ObjectOptionConfiguration)?[parseObjectArgList]
  */
 internal class Parser(
         override val errorReporter: ParseErrorReporter,
@@ -45,7 +46,7 @@ internal class Parser(
                 is WindowsPreamble -> parseWindowsOption(rest())
                 is ShortPreamble -> parseShortOption(rest())
                 is LongPreamble -> parseLongOption(rest())
-                else -> { logAndRecover("expected $Preambles") }
+                else -> logAndRecover("expected $Preambles")
             }
 
             children += newChild
@@ -111,7 +112,7 @@ internal class Parser(
     private fun parseOptionsBackHalf(optName: Token, tokens: List<Token>)
             : Pair<CommandLineOption<*>?, ParseNode> = analyzing(tokens){
 
-        val config = componentCombinators.singleOrNull { optionSpec ->
+        val config = componentCombinators.firstOrNull() { optionSpec ->
             when (optName as? OptionName) {
                 is LongOptionName -> optName.text == optionSpec.longName
                 is ShortOptionName -> optName.text == optionSpec.shortName
@@ -130,6 +131,11 @@ internal class Parser(
                     null -> "???"
                 }}
                 errorReporter.reportParsingProblem(optName, "unknown option '$problemOpt', expected ${available.qcs}")
+
+                if(peek() is SuperTokenSeparator && peek(1) is Argument){
+                    expect<SuperTokenSeparator>()
+                    expect<Argument>()
+                }
                 ErrorNode
             }
             config is BooleanOptionConfiguration && config.isHelp -> {
@@ -252,11 +258,15 @@ internal class Parser(
 
         errorReporter.reportParsingProblem(peek(), message)
 
-        while( !(peek() is SuperTokenSeparator && peek(1) is OptionPreambleToken) && peek(1) !is Epsilon) {
+        while(peek(1) !is Epsilon && ! startsNewOption()) {
             next()
         }
 
         return ErrorNode
+    }
+
+    private fun Marker.startsNewOption(): Boolean {
+        return peek() is SuperTokenSeparator && peek(1) is OptionPreambleToken
     }
 
     //quoted-comma-separated
