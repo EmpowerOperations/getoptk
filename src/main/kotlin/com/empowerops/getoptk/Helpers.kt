@@ -56,21 +56,3 @@ internal fun makeHelpOption(otherOptions: List<CommandLineOption<*>>) = BooleanO
     isHelp = true
 }
 
-
-internal fun getDefaultValueOrLogError(
-        errorReporter: ConfigErrorReporter,
-        type: KClass<*>,
-        currentValue: Any,
-        descriptor: String
-): Any {
-
-    val availableValue: Any? = if (currentValue != UNINITIALIZED) currentValue else DefaultValues[type]
-    val newValue = when {
-        availableValue != null -> availableValue
-        else -> {
-            errorReporter.reportConfigProblem("no default value for $descriptor")
-            UNINITIALIZED
-        }
-    }
-    return newValue
-}

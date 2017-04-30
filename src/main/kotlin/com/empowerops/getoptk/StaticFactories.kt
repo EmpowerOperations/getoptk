@@ -22,9 +22,18 @@ data class FactoryErrorList(val errors: Map<List<KClass<*>>, String>, val node: 
     }
 }
 
-interface UnrolledAndUntypedFactory<out T> {
+interface UnrolledAndUntypedFactory<out T>{
     val argCount: Int
     fun make(args: List<String>): T
+}
+
+data class PremadeValue<out T>(val value: T): FactorySearchResult<T>(), UnrolledAndUntypedFactory<T> {
+
+    override val argCount = 0
+    override fun make(args: List<String>): T{
+        require(args.isEmpty())
+        return value
+    }
 }
 
 class CompositeUnrolledAndUntypedFactory<out T>(val members: List<UnrolledAndUntypedFactory<*>>, val ctor: KFunction<T>)
@@ -38,6 +47,8 @@ class CompositeUnrolledAndUntypedFactory<out T>(val members: List<UnrolledAndUnt
 
         for((index, member) in members.withIndex()){
             val memberParams = argIterator.asSequence().take(member.argCount)
+            // TODO: if i use List<KParameter> instead of simply argCount, I can use callBy,
+            // which is both more robust and will provide a really nice to-string
 
             val nextArg = try { member.make(memberParams.toList()) }
                     catch(ex: FactoryCreateFailed) { throw ex.apply { this.index += index } }
@@ -82,13 +93,28 @@ class ConverterSet(private val converters: Map<KClass<*>, Converter<*>>)
     }
     operator fun <T: Any> plus(newConveter: Pair<KClass<T>, Converter<T?>>) = ConverterSet(converters + newConveter)
 }
+
+fun <T: Any> makeFactoryFor(desiredType: KClass<T>, converters: ConverterSet)
+         = makeFactoryFor(desiredType, converters, makeClosedDelegate = false, remainingDepth = 5)
+
+fun <T: Any> makeProviderOf(desiredType: KClass<T>, converters: ConverterSet)
+        = makeFactoryFor(desiredType, converters, makeClosedDelegate = true, remainingDepth = 5)
+
 // this is a full-tree search, which might get time-complexity problems.
 // remember that the scala std-lib (and dexx in java) are able to get all of memory with only
 // 7 layers of a tree with a branch factor of 32.
 // here the branch factor is the total number of constructor parameters (ctors.flatMap { it.params }.size)
 // which probably has a 3-sigma upperbound at around 20. That _could_ be a very large graph.
-fun <T: Any> makeFactoryFor(desiredType: KClass<T>, converters: ConverterSet, remainingDepth: Int = 5)
+private fun <T: Any> makeFactoryFor(desiredType: KClass<T>, converters: ConverterSet, makeClosedDelegate: Boolean, remainingDepth: Int)
         : FactorySearchResult<T> {
+
+    //baseCase 0 (hack): if we're in closed-delegate mode look for a default value
+    if(makeClosedDelegate){
+        val defaultValue = DefaultValues[desiredType]
+        if(defaultValue != null){
+            return PremadeValue(defaultValue)
+        }
+    }
 
     //base case 1: we can convert this type directly
     val converter = converters[desiredType] ?: DefaultConverters[desiredType]
@@ -118,7 +144,7 @@ fun <T: Any> makeFactoryFor(desiredType: KClass<T>, converters: ConverterSet, re
         for(param in ctor.parameters){
             val classifier = (param.type.classifier as? KClass<*>) ?: continue@ctors
 
-            val factoryOrErrors = makeFactoryFor(classifier, converters, remainingDepth - 1)
+            val factoryOrErrors = makeFactoryFor(classifier, converters, makeClosedDelegate, remainingDepth - 1)
 
             when(factoryOrErrors){
                 is FactoryErrorList -> errorsForThisCtor += factoryOrErrors

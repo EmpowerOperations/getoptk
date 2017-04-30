@@ -119,6 +119,22 @@ class ErrorExamples {
             default = "33.4".toInt()
         }
     }
+
+    @Test fun `when command line fails to specify an argument should properly format`(){
+        val args = arrayOf("--req1", "val1")
+
+        //act
+        val ex = assertThrows<MissingOptionsException> { args.parsedAs("prog") { TwoRequiredFieldCLI() } }
+
+        //assert
+        TODO("assert that ex has nice message")
+    }
+    class TwoRequiredFieldCLI: CLI(){
+        val req1: String by getValueOpt()
+        val req2: String by getValueOpt {
+            shortName = "r2"
+        }
+    }
 }
 
 

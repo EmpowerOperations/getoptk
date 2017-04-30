@@ -70,6 +70,8 @@ class ParseFailedException(val messages: List<String>, cause: Exception?)
 
 class HelpException(message: String) : RuntimeException(message)
 
+class MissingOptionsException: RuntimeException()
+
 private class ConfigurationExceptionCause: RuntimeException("Configuration Exception")
 private class ParseExceptionCause: RuntimeException("Parse Exception")
 

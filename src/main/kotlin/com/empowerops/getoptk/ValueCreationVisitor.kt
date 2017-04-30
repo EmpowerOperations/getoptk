@@ -1,52 +1,59 @@
 package com.empowerops.getoptk
 
-internal class ValueCreationVisitor(val errorReporter: ParseErrorReporter) {
+internal class ValueCreationVisitor(val allOptions: List<CommandLineOption<*>>, val errorReporter: ParseErrorReporter) {
+
+    var unconsumedOptions: List<CommandLineOption<*>> = allOptions
+        private set
 
     fun visitEnter(cliNode: CLIRootNode) {}
     fun visitLeave(cliNode: CLIRootNode) {}
 
     fun visitEnter(optionNode: BooleanOptionNode) {}
     fun visitLeave(optionNode: BooleanOptionNode) {
-        val config = optionNode.config
+        val config = optionNode.config ?: return
+        unconsumedOptions -= config
 
-        if(config != null){
+        if(config.isHelp){
+            errorReporter.requestedHelp = true
+        }
 
-            if(config.isHelp){
-                errorReporter.requestedHelp = true
-            }
-            
-            config.value = when(config.interpretation){
-                FlagInterpretation.FLAG_IS_TRUE -> true
-                FlagInterpretation.FLAG_IS_FALSE -> false
-            }
+        config.value = when(config.interpretation){
+            FlagInterpretation.FLAG_IS_TRUE -> Value(true)
+            FlagInterpretation.FLAG_IS_FALSE -> Value(false)
         }
     }
 
     fun visitEnter(optionNode: ValueOptionNode) {}
     fun visitLeave(optionNode: ValueOptionNode) {
         val config = optionNode.config ?: return
+        unconsumedOptions -= (config as CommandLineOption<*>)
+        
         val argumentNode = optionNode.argumentNode.children.single() as? ArgumentNode ?: return
 
         val argToken = argumentNode.valueToken
         val converted = config.converter.tryConvert(config as CommandLineOption<*>, argToken)
 
-        config.value = converted
+        config.value = Value(converted)
     }
 
     fun visitEnter(optionNode: ObjectOptionNode) {}
     fun visitLeave(optionNode: ObjectOptionNode) {
         val config = optionNode.config ?: return
+        unconsumedOptions -= (config as CommandLineOption<*>)
+
         val argumentNodes = optionNode.arguments.children.filterIsInstance<ArgumentNode>()
 
         val factory = config.factoryOrErrors as UnrolledAndUntypedFactory<*>
         val converted = factory.tryMake(config as CommandLineOption<*>, argumentNodes.map { it.valueToken })
 
-        config.value = converted
+        config.value = Value(converted)
     }
 
     fun visitEnter(optionNode: ListOptionNode) {}
     fun visitLeave(optionNode: ListOptionNode) {
         val config = optionNode.config ?: return
+        unconsumedOptions -= (config as CommandLineOption<*>)
+        
         val parseMode = config.parseMode
         val argumentTokens = optionNode.arguments.children.filterIsInstance<ArgumentNode>().map { it.valueToken }
 
@@ -68,7 +75,7 @@ internal class ValueCreationVisitor(val errorReporter: ParseErrorReporter) {
 
         //note: I might have polluted this list with nulls for a not-nullable type.
         // TODO: some kind of flag to return early?
-        config.value = instances
+        config.value = @Suppress("UNCHECKED_CAST") (Value(instances) as ValueStrategy<Nothing>)
     }
 
     fun visitEnter(argumentNode: ArgumentNode) {}

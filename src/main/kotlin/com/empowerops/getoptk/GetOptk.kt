@@ -61,7 +61,7 @@ abstract class CLI {
 
             val root = parser.parseCLI(tokens)
 
-            root.accept(ValueCreationVisitor(parseErrorReporter))
+            val visitor = ValueCreationVisitor(opts, parseErrorReporter).apply { root.accept(this) }
 
             if(parseErrorReporter.requestedHelp){
                 val helpMessage = makeHelpMessage(programName, cmd.optionProperties)
@@ -69,6 +69,11 @@ abstract class CLI {
             }
             if(parseErrorReporter.parsingProblems.any()){
                 altHandler(ParseFailure(parseErrorReporter.parsingProblems))
+            }
+
+            val requiredButNotSpecifiedOptions = visitor.unconsumedOptions.filter { it.isRequired }
+            if(requiredButNotSpecifiedOptions.any()){
+                altHandler(MissingOptions(requiredButNotSpecifiedOptions))
             }
 
             return cmd
@@ -198,6 +203,7 @@ sealed class SpecialCaseInterpretation
 data class ConfigurationFailure(val configurationProblems: List<ConfigurationProblem>) : SpecialCaseInterpretation()
 data class ParseFailure(val parseProblems: List<ParseProblem>) : SpecialCaseInterpretation()
 data class HelpRequested(val helpMessage: String) : SpecialCaseInterpretation()
+data class MissingOptions(val missingOptions: List<Any>): SpecialCaseInterpretation()
 
 fun throwSpecialCase(specialCase: SpecialCaseInterpretation): Nothing = when(specialCase){
     is ConfigurationFailure -> throw ConfigurationException(specialCase.configurationProblems)
@@ -206,6 +212,7 @@ fun throwSpecialCase(specialCase: SpecialCaseInterpretation): Nothing = when(spe
             specialCase.parseProblems.firstOrNull { it.stackTrace != null}?.stackTrace
     )
     is HelpRequested -> throw HelpException(specialCase.helpMessage)
+    is MissingOptions -> throw MissingOptionsException()
 }
 
 fun ignoreUnrecognized(specialCase: SpecialCaseInterpretation): Unit = when(specialCase){
@@ -219,4 +226,5 @@ fun ignoreUnrecognized(specialCase: SpecialCaseInterpretation): Unit = when(spec
         else Unit
     }
     is HelpRequested -> throw HelpException(specialCase.helpMessage)
+    is MissingOptions -> throw MissingOptionsException()
 }
