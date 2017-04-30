@@ -1,6 +1,5 @@
 package com.empowerops.getoptk
 
-import junit.framework.AssertionFailedError
 import org.assertj.core.api.Assertions.*
 import org.junit.Test
 import java.lang.UnsupportedOperationException
@@ -98,6 +97,26 @@ class ErrorExamples {
                 "bob" -> "bobbo"
                 else -> TODO()
             }}
+        }
+    }
+
+    @Test fun `when configuration throws exception should collect all problems and report them at the same time`(){
+        val args = arrayOf("")
+
+        //act
+        val ex = assertThrows<ConfigurationException> { ExplosiveCLI() }
+
+        //assert
+        TODO("should assert that ex has two causes, and that it has a nice message, and that it points to the right spot.")
+    }
+
+    class ExplosiveCLI: CLI(){
+        val first: Double by getOpt {
+            default = "twenty-three".toDouble()
+        }
+
+        val second: Int by getOpt {
+            default = "33.4".toInt()
         }
     }
 }

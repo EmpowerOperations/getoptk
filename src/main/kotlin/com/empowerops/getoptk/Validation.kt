@@ -29,6 +29,9 @@ private fun ConfigErrorReporter.checkConverter(newOption: CommandLineOption<*>) 
         is ObjectOptionConfigurationImpl<*> -> with(newOption){
             if(factoryOrErrors is FactoryErrorList) reportBadFactory(newOption, factoryOrErrors as FactoryErrorList)
         }
+        is NullableObjectOptionConfigurationImpl<*> -> with(newOption){
+            if(factoryOrErrors is FactoryErrorList) reportBadFactory(newOption, factoryOrErrors as FactoryErrorList)
+        }
         is ListOptionConfigurationImpl<*> -> with(newOption){
             if(parseMode is ImplicitObjects && factoryOrErrors is FactoryErrorList){
                 reportBadFactory(newOption, factoryOrErrors as FactoryErrorList)
@@ -37,6 +40,10 @@ private fun ConfigErrorReporter.checkConverter(newOption: CommandLineOption<*>) 
             else { }
         }
         is ValueOptionConfigurationImpl<*> -> {
+            if(newOption.converter is InvalidConverter) reportBadConverter()
+            else { }
+        }
+        is NullableValueOptionConfigurationImpl<*> -> {
             if(newOption.converter is InvalidConverter) reportBadConverter()
             else { }
         }

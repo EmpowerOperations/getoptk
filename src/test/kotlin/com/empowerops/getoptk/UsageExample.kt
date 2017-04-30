@@ -123,6 +123,20 @@ class UsageExample {
     }
     data class Thingy(val name: String, val value: Double)
 
+    @Test fun `when using data class nullably embedded in command line should properly read`(){
+        //setup
+        val args = arrayOf("--thingy", "bob", "1.234")
+
+        //act
+        val instance = args.parsedAs("prog") { ObjectHolder() }
+
+        //assert
+        assertThat(instance.thingy).isEqualTo(Thingy("bob", 1.234))
+    }
+    class NullableObjectHolder: CLI(){
+        val thingy: Thingy? by getNullableOpt()
+    }
+
     @Test fun `when using tree nested data classes should properly project and read`(){
         //setup
         val args = arrayOf("--thingyParent", "bob", "1.234", "2")
@@ -262,7 +276,6 @@ class UsageExample {
         }
     }
 
-
     @Test fun `when using noop for unrecognized options should still parse remaining options properly`(){
         val args = arrayOf("-o", "asdf", "-g", "-h", "1234", "--nonexistant", "45")
 
@@ -273,6 +286,31 @@ class UsageExample {
         assertThat(instance.anotherString)
     }
 
+    @Test fun `when using defaulted values should properly parse`(){
+        //setup
+        val args = emptyArray<String>()
 
+        //act
+        val instance = args.parsedAs("prog") { HeavilyDefaultedCLI() }
+
+        //assert
+        with(instance){
+            assertThat(nullable).isNull()
+            assertThat(nonNullable).isEqualTo(SimpleDTO(1, 2.0))
+            assertThat(valueType).isEqualTo(0.0)
+        }
+    }
+    class HeavilyDefaultedCLI: CLI(){
+        val nullable: SimpleDTO? by getNullableOpt()
+        val nonNullable: SimpleDTO by getOpt {
+            default = SimpleDTO(1, 2.0)
+            shortName = "no"
+        }
+        val valueType: Double by getValueOpt {
+            isRequired = false
+        }
+    }
+
+    data class SimpleDTO(val first: Int, val second: Double)
 }
 

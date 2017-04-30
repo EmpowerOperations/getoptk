@@ -5,14 +5,7 @@ package com.empowerops.getoptk
  */
 
 
-data class ConfigurationProblem(val message: String, val stackTrace: Exception = ConfigurationExceptionCause()){
-
-    fun toDescribedProblem(): String {
-        val relevantFrame = stackTrace.stackTrace.firstOrNull() //TODO: make this point at the specific line.
-        // problem is its a caller of an inline function
-        return "$message\n\tspecified $relevantFrame"
-    }
-}
+data class ConfigurationProblem(val message: String, val stackTrace: Exception = ConfigurationExceptionCause())
 
 data class ParseProblem(val message: String, val stackTrace: Exception?)
 
@@ -70,14 +63,14 @@ class ParseErrorReporter(val programNamePrefix: String, val tokens: List<Token>)
 }
 
 class ConfigurationException(val messages: List<ConfigurationProblem>)
-    : RuntimeException((listOf("CLI configuration errors:") + messages.map { it.toDescribedProblem() }).joinToString("\n"), messages.firstOrNull()?.stackTrace)
+    : RuntimeException((listOf("CLI configuration errors:") + messages.map { it.message }).joinToString("\n"), messages.firstOrNull()?.stackTrace)
 
 class ParseFailedException(val messages: List<String>, cause: Exception?)
     : RuntimeException(messages.joinToString("\n\n"), cause)
 
 class HelpException(message: String) : RuntimeException(message)
 
-class ConfigurationExceptionCause: RuntimeException("Configuration Exception")
-class ParseExceptionCause: RuntimeException("Parse Exception")
+private class ConfigurationExceptionCause: RuntimeException("Configuration Exception")
+private class ParseExceptionCause: RuntimeException("Parse Exception")
 
 interface ErrorReporting { val errorReporter: ParseErrorReporter }

@@ -151,6 +151,9 @@ fun <T: CLI> Array<String>.parsedAs(programName: String, altHandler: (SpecialCas
 inline fun <reified T: Any> CLI.getValueOpt(noinline spec: ValueOptionConfiguration<T>.() -> Unit = {})
         = getValueOpt(this, spec, T::class)
 
+inline fun <reified T: Any> CLI.getNullableValueOpt(noinline spec: NullableValueOptionConfiguration<T>.() -> Unit = {})
+        = getNullableValueOpt(this, spec, T::class)
+
 /**
  * Defines a list option type from the command line.
  *
@@ -159,12 +162,16 @@ inline fun <reified T: Any> CLI.getValueOpt(noinline spec: ValueOptionConfigurat
  */
 inline fun <reified E: Any> CLI.getListOpt(noinline spec: ListOptionConfiguration<E>.() -> Unit = {})
         = getListOpt(this, spec, E::class)
+//cant think of a use case for a NullableList since emptyList serves as an effective monadic-unit.
 
 /**
  * Defines an object option type from the command line.
  */
 inline fun <reified T: Any> CLI.getOpt(noinline spec: ObjectOptionConfiguration<T>.() -> Unit = {})
         = getOpt(this, spec, T::class)
+
+inline fun <reified T: Any> CLI.getNullableOpt(noinline spec: NullableObjectOptionConfiguration<T>.() -> Unit = {})
+        = getNullableOpt(this, spec, T::class)
 
 /**
  * Defines a boolean (flag) option type from the command line.
@@ -175,11 +182,17 @@ fun CLI.getFlagOpt(spec: BooleanOptionConfiguration.() -> Unit = {}): BooleanOpt
 fun <T: Any> getValueOpt(cli: CLI, spec: ValueOptionConfiguration<T>.() -> Unit, type: KClass<T>): ValueOptionConfiguration<T>
         = ValueOptionConfigurationImpl(type, spec)
 
+fun <T: Any> getNullableValueOpt(cli: CLI, spec: NullableValueOptionConfiguration<T>.() -> Unit, type: KClass<T>): NullableValueOptionConfiguration<T>
+        = NullableValueOptionConfigurationImpl(type, spec)
+
 fun <T: Any> getListOpt(cli: CLI, spec: ListOptionConfiguration<T>.() -> Unit, elementType: KClass<T>): ListOptionConfiguration<T>
         = ListOptionConfigurationImpl(elementType, spec)
 
 fun <T: Any> getOpt(cli: CLI, spec: ObjectOptionConfiguration<T>.() -> Unit, objectType: KClass<T>): ObjectOptionConfiguration<T>
         = ObjectOptionConfigurationImpl(objectType, spec)
+
+fun <T: Any> getNullableOpt(cli: CLI, spec: NullableObjectOptionConfiguration<T>.() -> Unit, objectType: KClass<T>): NullableObjectOptionConfiguration<T>
+        = NullableObjectOptionConfigurationImpl(objectType, spec)
 
 sealed class SpecialCaseInterpretation
 data class ConfigurationFailure(val configurationProblems: List<ConfigurationProblem>) : SpecialCaseInterpretation()

@@ -55,12 +55,12 @@ class CompositeUnrolledAndUntypedFactory<out T>(val members: List<UnrolledAndUnt
 
 }
 
-class FactoryCreateFailed(var index: Int, ex: Exception): RuntimeException(ex)
-
 class ComponentUnrolledAndUntypedFactory<out T>(val factory: Converter<T>): FactorySearchResult<T>(), UnrolledAndUntypedFactory<T>{
     override fun make(args: List<String>): T = factory.invoke(args.single())
     override val argCount = 1;
 }
+
+class FactoryCreateFailed(var index: Int, ex: Exception): RuntimeException(ex)
 
 class ConverterSet(private val converters: Map<KClass<*>, Converter<*>>)
     : Collection<Converter<*>> by converters.entries.map({ it.value }) {
@@ -80,7 +80,7 @@ class ConverterSet(private val converters: Map<KClass<*>, Converter<*>>)
 
         return null
     }
-    operator fun <T: Any> plus(newConveter: Pair<KClass<T>, Converter<T>>) = ConverterSet(converters + newConveter)
+    operator fun <T: Any> plus(newConveter: Pair<KClass<T>, Converter<T?>>) = ConverterSet(converters + newConveter)
 }
 // this is a full-tree search, which might get time-complexity problems.
 // remember that the scala std-lib (and dexx in java) are able to get all of memory with only
@@ -101,7 +101,7 @@ fun <T: Any> makeFactoryFor(desiredType: KClass<T>, converters: ConverterSet, re
         return FactoryErrorList(mapOf(listOf(desiredType) to "Constructor dependency graph is too deep."), desiredType)
     }
 
-    var errorsForTypeType = FactoryErrorList(emptyMap(), desiredType)
+    var errors = FactoryErrorList(emptyMap(), desiredType)
 
     val allConstructors = desiredType.constructors
     val constructors = allConstructors.filter { it.visibility ?: KVisibility.PRIVATE >= KVisibility.PUBLIC }
@@ -126,7 +126,7 @@ fun <T: Any> makeFactoryFor(desiredType: KClass<T>, converters: ConverterSet, re
             }
 
             if(errorsForThisCtor.any()) {
-                errorsForTypeType += errorsForThisCtor
+                errors += errorsForThisCtor
                 continue@ctors
             }
         }
@@ -134,7 +134,7 @@ fun <T: Any> makeFactoryFor(desiredType: KClass<T>, converters: ConverterSet, re
         return CompositeUnrolledAndUntypedFactory(subCtorsForThisCtor, ctor)
     }
 
-    return errorsForTypeType
+    return errors
 }
 
 operator fun KVisibility.compareTo(right: KVisibility): Int = this.ordinal.compareTo(right.ordinal)

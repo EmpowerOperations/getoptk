@@ -12,8 +12,8 @@ class Marker(
 
     var index = 0
 
-    internal fun pushMark(): Unit = marks.push(index)
-    internal fun popMarkedTokens(): List<Token> = validSublistFrom(marks.pop())
+    internal fun pushMark(): Unit = if(any()) marks.push(index) else Unit
+    internal fun popMarkedTokens(): List<Token> = if(any()) validSublistFrom(marks.pop()) else emptyList()
     internal fun markedTokens(): List<Token> = validSublistFrom(marks.peek())
     internal fun popAndRevertToMark() { index = marks.pop() }
 

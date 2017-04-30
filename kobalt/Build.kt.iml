@@ -10,13 +10,13 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module-library">
-      <library name="Kobalt: com.beust.kobalt:kobalt:jar:1.0.76">
+      <library name="Kobalt: com.beust.kobalt:kobalt:jar:1.0.80">
         <CLASSES>
-          <root url="jar://$USER_HOME$/.kobalt/wrapper/dist/kobalt-1.0.76/kobalt/wrapper/kobalt-1.0.76.jar!/" />
+          <root url="jar://$USER_HOME$/.kobalt/wrapper/dist/kobalt-1.0.80/kobalt/wrapper/kobalt-1.0.80.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES>
-          <root url="jar://$USER_HOME$/.kobalt/wrapper/dist/kobalt-1.0.76/kobalt/wrapper/kobalt-1.0.76-sources.jar!/" />
+          <root url="jar://$USER_HOME$/.kobalt/wrapper/dist/kobalt-1.0.80/kobalt/wrapper/kobalt-1.0.80-sources.jar!/" />
         </SOURCES>
       </library>
     </orderEntry>

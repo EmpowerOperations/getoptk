@@ -8,7 +8,13 @@ internal class ValueCreationVisitor(val errorReporter: ParseErrorReporter) {
     fun visitEnter(optionNode: BooleanOptionNode) {}
     fun visitLeave(optionNode: BooleanOptionNode) {
         val config = optionNode.config
+
         if(config != null){
+
+            if(config.isHelp){
+                errorReporter.requestedHelp = true
+            }
+            
             config.value = when(config.interpretation){
                 FlagInterpretation.FLAG_IS_TRUE -> true
                 FlagInterpretation.FLAG_IS_FALSE -> false
@@ -22,7 +28,7 @@ internal class ValueCreationVisitor(val errorReporter: ParseErrorReporter) {
         val argumentNode = optionNode.argumentNode.children.single() as? ArgumentNode ?: return
 
         val argToken = argumentNode.valueToken
-        val converted = config.converter.tryConvert(config, argToken)
+        val converted = config.converter.tryConvert(config as CommandLineOption<*>, argToken)
 
         config.value = converted
     }
@@ -33,7 +39,7 @@ internal class ValueCreationVisitor(val errorReporter: ParseErrorReporter) {
         val argumentNodes = optionNode.arguments.children.filterIsInstance<ArgumentNode>()
 
         val factory = config.factoryOrErrors as UnrolledAndUntypedFactory<*>
-        val converted = factory.tryMake(config, argumentNodes.map { it.valueToken })
+        val converted = factory.tryMake(config as CommandLineOption<*>, argumentNodes.map { it.valueToken })
 
         config.value = converted
     }

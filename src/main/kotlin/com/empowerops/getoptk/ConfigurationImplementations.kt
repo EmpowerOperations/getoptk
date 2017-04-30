@@ -3,9 +3,11 @@ package com.empowerops.getoptk
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
-import kotlin.reflect.full.cast
 
-internal sealed class CommandLineOption<out T>: ReadOnlyProperty<CLI, T>{
+/**
+ * Created by Geoff on 2017-04-29.
+ */
+internal sealed class CommandLineOption<out T>: ReadOnlyProperty<CLI, T> {
 
     lateinit var property: KProperty<*>
 
@@ -45,46 +47,8 @@ internal sealed class CommandLineOption<out T>: ReadOnlyProperty<CLI, T>{
     }
 }
 
-//region must be public!
 
-operator fun <T: Any> ValueOptionConfiguration<T>.provideDelegate(thisRef: CLI, prop: KProperty<*>) = provideDelegateImpl(this, thisRef, prop)
-operator fun <T: Any> ObjectOptionConfiguration<T>.provideDelegate(thisRef: CLI, prop: KProperty<*>) = provideDelegateImpl(this, thisRef, prop)
-operator fun <T: Any> ListOptionConfiguration<T>.provideDelegate(thisRef: CLI, prop: KProperty<*>) = provideDelegateImpl(this, thisRef, prop)
-operator fun BooleanOptionConfiguration.provideDelegate(thisRef: CLI, prop: KProperty<*>) = provideDelegateImpl(this, thisRef, prop)
-
-internal fun <T, E> provideDelegateImpl(host: T, thisRef: CLI, prop: KProperty<*>): T where T: ReadOnlyProperty<CLI, E> {
-    (host as CommandLineOption<*>).provideDelegateImpl(thisRef, prop)
-    return host
-}
-
-//endregion
-
-internal val ValueOptionConfiguration<*>.asImpl: ValueOptionConfigurationImpl<*> get() = this as ValueOptionConfigurationImpl<*>
-internal val ObjectOptionConfiguration<*>.asImpl: ObjectOptionConfigurationImpl<*> get() = this as ObjectOptionConfigurationImpl<*>
-internal val ListOptionConfiguration<*>.asImpl: ListOptionConfigurationImpl<*> get() = this as ListOptionConfigurationImpl<*>
-internal val BooleanOptionConfiguration.asImpl: BooleanOptionConfigurationImpl get() = this as BooleanOptionConfigurationImpl
-
-
-private object UNINITIALIZED
-
-internal fun CommandLineOption<*>.names() = listOf(shortName, longName)
-internal fun CommandLineOption<*>.toPropertyDescriptor(): String {
-    val valOrVarPrefix = property.toString().substring(0, 3)
-
-    val name = property.name
-    val type = (property.returnType.classifier as? KClass<*>)?.simpleName ?: return property.toString()
-
-    val getOptFlavour = when(this){
-        is ValueOptionConfigurationImpl<*> -> "getValueOpt"
-        is BooleanOptionConfigurationImpl -> "getFlagOpt"
-        is ListOptionConfigurationImpl<*> -> "getValueOpt"
-        is ObjectOptionConfigurationImpl<*> -> "getValueOpt"
-    }
-
-    return "$valOrVarPrefix $name: $type by $getOptFlavour()"
-}
-
-open internal class BooleanOptionConfigurationImpl(
+internal class BooleanOptionConfigurationImpl(
         val userConfig: BooleanOptionConfiguration.() -> Unit
 ) : CommandLineOption<Boolean>(), BooleanOptionConfiguration {
 
@@ -105,27 +69,51 @@ open internal class BooleanOptionConfigurationImpl(
         value = when(interpretation){
             FlagInterpretation.FLAG_IS_TRUE -> false
             FlagInterpretation.FLAG_IS_FALSE -> true
-        } 
+        }
     }
-}
-
-internal fun makeHelpOption(otherOptions: List<CommandLineOption<*>>) = BooleanOptionConfigurationImpl {
-    longName = if(otherOptions.any { it.longName == "help" }) "" else "help"
-    shortName = if(otherOptions.any { it.shortName == "h" }) "" else "h"
-    isHelp = true
 }
 
 internal class ValueOptionConfigurationImpl<T: Any>(
         override val optionType: KClass<T>,
         val userConfig: ValueOptionConfiguration<T>.() -> Unit
-) : CommandLineOption<T>(), ValueOptionConfiguration<T> {
+) : CommandLineOption<T>(), ValueOptionConfiguration<T>, ValueOrNullableValueConfiguration<T> {
 
+    private var _default: Any = UNINITIALIZED
+
+    override var isRequired: Boolean = true
     override lateinit var converter: Converter<T>
+
+    override var default: T
+        @Suppress("UNCHECKED_CAST") get() =
+        if (_default != UNINITIALIZED) _default as T
+        else throw IllegalStateException("'default' is write-only as it currently has no value")
+        set(value) { _default = value }
 
     override fun applyAdditionalConfiguration(thisRef: CLI, prop: KProperty<*>?) {
         converter = DefaultConverters[optionType] ?: InvalidConverter
 
         userConfig()
+
+        _default = getDefaultValueOrLogError(thisRef.errorReporter, optionType, _default, this.toPropertyDescriptor())
+        value = _default
+    }
+}
+
+internal class NullableValueOptionConfigurationImpl<T: Any>(
+        override val optionType: KClass<T>,
+        val userConfig: NullableValueOptionConfiguration<T>.() -> Unit
+) : CommandLineOption<T?>(), NullableValueOptionConfiguration<T>, ValueOrNullableValueConfiguration<T?> {
+
+    override lateinit var converter: Converter<T?>
+    override var default: T? = DefaultValues[optionType]
+    override var isRequired: Boolean = false
+
+    override fun applyAdditionalConfiguration(thisRef: CLI, prop: KProperty<*>?) {
+        converter = DefaultConverters[optionType] ?: InvalidConverter
+
+        userConfig()
+
+        value = default
     }
 }
 
@@ -155,13 +143,23 @@ internal class ListOptionConfigurationImpl<E: Any>(
     }
 }
 
+
 internal class ObjectOptionConfigurationImpl<T: Any>(
         override val optionType: KClass<T>,
         val userConfig: ObjectOptionConfigurationImpl<T>.() -> Unit
-) : CommandLineOption<T>(), ObjectOptionConfiguration<T> {
+) : CommandLineOption<T>(), ObjectOptionConfiguration<T>, ObjectOrNullableObjectConfiguration<T> {
 
-    internal var converters: ConverterSet = ConverterSet(emptyMap())
-    internal lateinit var factoryOrErrors: FactorySearchResult<T>
+    private var _default: Any = UNINITIALIZED
+
+    override var converters: ConverterSet = ConverterSet(emptyMap())
+    override lateinit var factoryOrErrors: FactorySearchResult<T>
+
+    override var isRequired: Boolean = true
+
+    override var default: T get() =
+                if (_default != UNINITIALIZED) @Suppress("UNCHECKED_CAST") (_default as T)
+                else throw IllegalStateException("'default' is write-only as it currently has no value")
+        set(value) { _default = value }
 
     override fun <N : Any> registerConverter(type: KClass<N>, converter: Converter<N>) {
         converters += type to converter
@@ -173,6 +171,43 @@ internal class ObjectOptionConfigurationImpl<T: Any>(
 
         //this line must be done after the user has been allowed to configure the converters
         factoryOrErrors = makeFactoryFor(optionType, converters)
+
+        _default = getDefaultValueOrLogError(thisRef.errorReporter, optionType, _default, this.toPropertyDescriptor())
+        value = _default
+    }
+}
+
+internal class NullableObjectOptionConfigurationImpl<T: Any>(
+        override val optionType: KClass<T>,
+        val userConfig: NullableObjectOptionConfiguration<T>.() -> Unit
+) : CommandLineOption<T?>(), NullableObjectOptionConfiguration<T>, ObjectOrNullableObjectConfiguration<T?> {
+
+    override var default: T? = DefaultValues[optionType]
+    override var isRequired: Boolean = false
+
+    override var converters: ConverterSet = ConverterSet(emptyMap())
+    override lateinit var factoryOrErrors: FactorySearchResult<T?>
+
+    override fun <N : Any> registerConverter(type: KClass<N>, converter: Converter<N?>) {
+        converters += type to converter
     }
 
+    override fun applyAdditionalConfiguration(thisRef: CLI, prop: KProperty<*>?) {
+
+        userConfig()
+
+        //this line must be done after the user has been allowed to configure the converters
+        factoryOrErrors = makeFactoryFor(optionType, converters)
+
+        value = default
+    }
+}
+
+
+internal interface ObjectOrNullableObjectConfiguration<T> {
+    val converters: ConverterSet
+    val factoryOrErrors: FactorySearchResult<T>
+}
+internal interface ValueOrNullableValueConfiguration<T>{
+    val converter: Converter<T>
 }

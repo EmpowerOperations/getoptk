@@ -103,8 +103,7 @@ internal class Parser(
         return@analyzing makeOptionNode(preamble, optName, config, valueNode)
     }
 
-    /**
-     * [parseOptionsBackHalf]
+    /**[parseOptionsBackHalf]
      *   -> {config is ValueOptionConfiguration}?[SeparatorToken] [Argument]
      *   -> {config is ListOptionConfiguration}?[parseObjectArgList]|[parseVarargsList]|[parseCSVArgList]
      *   -> {config is ObjectOptionConfiguration)?[parseObjectArgList]
@@ -112,7 +111,7 @@ internal class Parser(
     private fun parseOptionsBackHalf(optName: Token, tokens: List<Token>)
             : Pair<CommandLineOption<*>?, ParseNode> = analyzing(tokens){
 
-        val config = componentCombinators.firstOrNull() { optionSpec ->
+        val config = componentCombinators.firstOrNull { optionSpec ->
             when (optName as? OptionName) {
                 is LongOptionName -> optName.text == optionSpec.longName
                 is ShortOptionName -> optName.text == optionSpec.shortName
@@ -138,43 +137,49 @@ internal class Parser(
                 }
                 ErrorNode
             }
-            config is BooleanOptionConfiguration && config.isHelp -> {
-                errorReporter.requestedHelp = true
-                ArgumentListNode(emptyList())
-            }
-            config is BooleanOptionConfiguration -> ArgumentListNode(emptyList())
+            
+            ! hasArgument -> ArgumentListNode(emptyList())
 
-            //when there's an argument:
-            hasArgument && config is ListOptionConfiguration<*> -> when(config.parseMode){
-                is CSV -> parseCSVArgList(config, rest())
-                is Varargs -> parseVarargsList(config, rest())
-                is ImplicitObjects -> parseObjectArgList(config, config.asImpl.factoryOrErrors as UnrolledAndUntypedFactory<*>, rest())
-            }
-            hasArgument && config is ObjectOptionConfiguration<*> -> {
-                //TODO this should cap the tokens it reads, this call is greedy when we dont need to be.
-                parseObjectArgList(config, config.asImpl.factoryOrErrors as UnrolledAndUntypedFactory<*>, rest())
-            }
-            hasArgument && config is ValueOptionConfiguration<*> -> {
-                val separator = expect<SeparatorToken>()
-                val arg = expect<Argument>()
+            else -> when(config){
+                is BooleanOptionConfigurationImpl -> ArgumentListNode(emptyList())
 
-                ArgumentListNode(listOf(ArgumentNode(separator, config, arg)))
+                is ListOptionConfigurationImpl<*> -> when(config.parseMode){
+                    is CSV -> parseCSVArgList(config, rest())
+                    is Varargs -> parseVarargsList(config, rest())
+                    is ImplicitObjects -> parseObjectArgList(config, config.factoryOrErrors as UnrolledAndUntypedFactory<*>, rest())
+                }
+
+                is ObjectOptionConfigurationImpl<*>, is NullableObjectOptionConfigurationImpl<*> -> {
+                    parseObjectArgList(config, config.factoryOrErrors as UnrolledAndUntypedFactory<*>, rest())
+                }
+                is ValueOptionConfigurationImpl<*>, is NullableValueOptionConfigurationImpl<*> -> {
+                    val separator = expect<SeparatorToken>()
+                    val arg = expect<Argument>()
+
+                    val argumentNode = ArgumentNode(separator, config, arg)
+                    ArgumentListNode(listOf(argumentNode))
+                }
             }
-            else -> ArgumentListNode(emptyList())
         }
         return@analyzing Pair(config, argumentList)
     }
 
-    private fun makeOptionNode(preamble: Token, optName: Token, config: CommandLineOption<*>?, argumentList: ParseNode)
-        : ParseNode = when (config) {
-            is ValueOptionConfiguration<*> -> ValueOptionNode(preamble, optName, config.asImpl, argumentList)
-            is BooleanOptionConfiguration -> BooleanOptionNode(preamble, optName, config.asImpl)
-            is ListOptionConfiguration<*> -> ListOptionNode(preamble, optName, config.asImpl, argumentList)
-            is ObjectOptionConfiguration<*> -> ObjectOptionNode(preamble, optName, config.asImpl, argumentList)
-            else -> ErrorNode.apply { errorReporter.internalError(optName, "expected $config to be a known type") }
+    private fun makeOptionNode(
+            preamble: Token,
+            optName: Token,
+            config: CommandLineOption<*>?,
+            argumentList: ParseNode
+    ): ParseNode = when (config) {
+        is BooleanOptionConfigurationImpl -> BooleanOptionNode(         preamble, optName, config)
+        is ValueOptionConfigurationImpl<*> -> ValueOptionNode(          preamble, optName, config, argumentList)
+        is NullableValueOptionConfigurationImpl<*> -> ValueOptionNode(  preamble, optName, config, argumentList)
+        is ListOptionConfigurationImpl<*> -> ListOptionNode(            preamble, optName, config, argumentList)
+        is ObjectOptionConfigurationImpl<*> -> ObjectOptionNode(        preamble, optName, config, argumentList)
+        is NullableObjectOptionConfigurationImpl<*> -> ObjectOptionNode(preamble, optName, config, argumentList)
+        null -> ErrorNode.apply { errorReporter.internalError(optName, "expected $config to be a known type") }
     }
 
-    fun parseCSVArgList(config: ListOptionConfiguration<*>, tokens: List<Token>): ParseNode = analyzing(tokens){
+    fun parseCSVArgList(config: ListOptionConfigurationImpl<*>, tokens: List<Token>): ParseNode = analyzing(tokens){
 
         // so I was thinking about trying to employ a fancy re-lexing strategy here,
         // but im not sure what the advantage is
@@ -191,7 +196,7 @@ internal class Parser(
             args += Argument(value, newTokenIndex)
         }
 
-        val nodes = separators.zip(args) { sep, arg -> ArgumentNode(sep, config.asImpl, arg) }
+        val nodes = separators.zip(args) { sep, arg -> ArgumentNode(sep, config, arg) }
         
         return@analyzing ArgumentListNode(nodes)
     }

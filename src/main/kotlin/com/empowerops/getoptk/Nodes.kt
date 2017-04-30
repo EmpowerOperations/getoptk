@@ -24,14 +24,14 @@ internal data class ListOptionNode(
 internal data class ObjectOptionNode(
         val preamble: Token,
         val optionName: Token,
-        val config: ObjectOptionConfigurationImpl<*>?,
+        val config: ObjectOrNullableObjectConfiguration<*>?,
         val arguments: ParseNode
 ): ParseNode(listOf(arguments))
 
 internal data class ValueOptionNode(
         val preamble: Token,
         val optionName: Token,
-        val config: ValueOptionConfigurationImpl<*>?,
+        val config: ValueOrNullableValueConfiguration<*>?,
         val argumentNode: ParseNode
 ): ParseNode(listOf(argumentNode)) 
 
