@@ -99,4 +99,5 @@ interface BooleanOptionConfiguration: ReadOnlyProperty<CLI, Boolean> {
     var shortName: String
 
     var isHelp: Boolean
+    var isRequired: Boolean
 }

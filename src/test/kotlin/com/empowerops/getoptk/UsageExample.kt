@@ -310,7 +310,22 @@ class UsageExample {
             isRequired = false
         }
     }
-
     data class SimpleDTO(val first: Int, val second: Double)
+
+
+    @Test fun `when using non-requiured complex object should properly call constructor for default value`(){
+        val args = emptyArray<String>()
+
+        //act
+        val result = args.parsedAs("prog") { NonDefaultedCLI() }
+
+        //assert
+        assertThat(result.nonnullable).isEqualTo(SimpleDTO(0, 0.0))
+    }
+    class NonDefaultedCLI: CLI(){
+        val nonnullable: SimpleDTO by getOpt{
+            isRequired = false
+        }
+    }
 }
 

@@ -54,5 +54,6 @@ internal fun makeHelpOption(otherOptions: List<CommandLineOption<*>>) = BooleanO
     longName = if(otherOptions.any { it.longName == "help" }) "" else "help"
     shortName = if(otherOptions.any { it.shortName == "h" }) "" else "h"
     isHelp = true
+    isRequired = false
 }
 

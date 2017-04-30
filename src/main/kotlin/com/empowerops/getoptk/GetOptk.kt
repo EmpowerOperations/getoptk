@@ -19,6 +19,8 @@ abstract class CLI {
     internal var optionProperties: List<CommandLineOption<*>> = emptyList()
     internal val errorReporter = ConfigErrorReporter()
 
+    //EQUALS logic TODO
+
     companion object {
 
         //so the behaviour here is wierd if hostFactory returns an already initialized instance
@@ -133,6 +135,8 @@ abstract class CLI {
             }
         }
     }
+
+    
 }
 
 /**
