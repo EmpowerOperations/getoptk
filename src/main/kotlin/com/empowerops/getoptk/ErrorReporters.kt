@@ -14,6 +14,9 @@ class ConfigErrorReporter(){
     fun reportConfigProblem(message: String){
         configurationErrors += ConfigurationProblem(message)
     }
+    fun reportConfigProblem(message: String, ex: Exception){
+        configurationErrors += ConfigurationProblem(message, ex)
+    }
 
     fun internalError(token: Token, errorMessage: String) {
         println("internal error at $token: $errorMessage")

@@ -169,12 +169,12 @@ internal class Parser(
             config: AbstractCommandLineOption<*>?,
             argumentList: ParseNode
     ): ParseNode = when (config) {
-        is BooleanOptionConfigurationImpl -> BooleanOptionNode(         preamble, optName, config)
-        is ValueOptionConfigurationImpl<*> -> ValueOptionNode(          preamble, optName, config, argumentList)
-        is NullableValueOptionConfigurationImpl<*> -> ValueOptionNode(  preamble, optName, config, argumentList)
-        is ListOptionConfigurationImpl<*> -> ListOptionNode(            preamble, optName, config, argumentList)
-        is ObjectOptionConfigurationImpl<*> -> ObjectOptionNode(        preamble, optName, config, argumentList)
-        is NullableObjectOptionConfigurationImpl<*> -> ObjectOptionNode(preamble, optName, config, argumentList)
+        is BooleanOptionConfigurationImpl           -> BooleanOptionNode(preamble, optName, config)
+        is ValueOptionConfigurationImpl<*>          -> ValueOptionNode  (preamble, optName, config, argumentList)
+        is NullableValueOptionConfigurationImpl<*>  -> ValueOptionNode  (preamble, optName, config, argumentList)
+        is ListOptionConfigurationImpl<*>           -> ListOptionNode   (preamble, optName, config, argumentList)
+        is ObjectOptionConfigurationImpl<*>         -> ObjectOptionNode (preamble, optName, config, argumentList)
+        is NullableObjectOptionConfigurationImpl<*> -> ObjectOptionNode (preamble, optName, config, argumentList)
         null -> ErrorNode.apply { errorReporter.internalError(optName, "expected $config to be a known type") }
     }
 

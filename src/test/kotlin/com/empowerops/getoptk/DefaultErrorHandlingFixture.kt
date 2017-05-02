@@ -1,6 +1,5 @@
 package com.empowerops.getoptk
 
-import org.assertj.core.api.AbstractThrowableAssert
 import org.assertj.core.api.Assertions.*
 import org.junit.Test
 import java.lang.UnsupportedOperationException
@@ -105,10 +104,15 @@ class DefaultErrorHandlingFixture {
         val args = arrayOf("")
 
         //act
-        val ex = assertThrows<ConfigurationException> { ExplosiveCLI() }
+        val ex = assertThrows<ConfigurationException> { args.parsedAs("prog") { ExplosiveCLI() } }
 
         //assert
-        TODO("should assert that ex has two causes, and that it has a nice message, and that it points to the right spot.")
+        assertThat(ex).isInstanceOf2<ConfigurationException>()
+        assertThat(ex.message).isEqualTo("""CLI configuration errors:
+                |specification for 'first' threw java.lang.NumberFormatException: For input string: "twenty-three"
+                |specification for 'second' threw java.lang.NumberFormatException: For input string: "33.4"
+                """.trimMargin()
+        )
     }
 
     class ExplosiveCLI: CLI(){

@@ -82,7 +82,7 @@ internal data class BooleanOptionConfigurationImpl(
 
     override fun applyAdditionalConfiguration(thisRef: CLI, prop: KProperty<*>?) {
 
-        userConfig()
+        invokeAndReportErrorsTo(thisRef.errorReporter, this) { userConfig() }
 
         _value = Value(when(interpretation){
             FlagInterpretation.FLAG_IS_TRUE -> false
@@ -111,7 +111,7 @@ internal data class ValueOptionConfigurationImpl<T: Any>(
 
     override fun applyAdditionalConfiguration(thisRef: CLI, prop: KProperty<*>?) {
 
-        userConfig()
+        invokeAndReportErrorsTo(thisRef.errorReporter, this) { userConfig() }
 
         _value = if(_default != UNINITIALIZED) Value(default) else NoValue
     }
@@ -128,7 +128,7 @@ internal data class NullableValueOptionConfigurationImpl<T: Any>(
 
     override fun applyAdditionalConfiguration(thisRef: CLI, prop: KProperty<*>?) {
 
-        userConfig()
+        invokeAndReportErrorsTo(thisRef.errorReporter, this) { userConfig() }
 
         _value = Value(default)
     }
@@ -146,7 +146,7 @@ internal data class ListOptionConfigurationImpl<E: Any>(
     
     override fun applyAdditionalConfiguration(thisRef: CLI, prop: KProperty<*>?) {
 
-        userConfig()
+        invokeAndReportErrorsTo(thisRef.errorReporter, this) { userConfig() }
 
         //this line must be done after the user has been allowed to configure the converters
         val parseMode = parseMode
@@ -183,7 +183,7 @@ internal data class ObjectOptionConfigurationImpl<T: Any>(
 
     override fun applyAdditionalConfiguration(thisRef: CLI, prop: KProperty<*>?) {
 
-        userConfig()
+        invokeAndReportErrorsTo(thisRef.errorReporter, this) { userConfig() }
 
         //this line must be done after the user has been allowed to configure the converters
         factoryOrErrors = makeFactoryFor(optionType, converters)
@@ -220,7 +220,7 @@ internal data class NullableObjectOptionConfigurationImpl<T: Any>(
 
     override fun applyAdditionalConfiguration(thisRef: CLI, prop: KProperty<*>?) {
 
-        userConfig()
+        invokeAndReportErrorsTo(thisRef.errorReporter, this){ userConfig() }
 
         //this line must be done after the user has been allowed to configure the converters
         factoryOrErrors = makeFactoryFor(optionType, converters)
@@ -250,3 +250,8 @@ class Provider<out T>(val provider: Lazy<T>): ValueStrategy<T>() {
     override fun hashCode() = provider.value?.hashCode() ?: -1
 }
 data class Value<out T>(val value: T): ValueStrategy<T>()
+
+internal fun <T> invokeAndReportErrorsTo(errorReporter: ConfigErrorReporter, option: AbstractCommandLineOption<*>, func: () -> T){
+    try { func() }
+    catch(ex: Exception){ errorReporter.reportConfigProblem("specification for '${option.longName}' threw $ex", ex) }
+}
