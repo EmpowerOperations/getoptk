@@ -34,5 +34,4 @@ kobalt/out/classes/
 .idea/dictionaries/
 .idea/kobalt.xml
 kobalt/Build.kt.iml
-getoptk.iml
 kobalt/wrapper/kobalt-wrapper.properties
