@@ -17,7 +17,7 @@ internal class ValueCreationVisitor(val allOptions: List<AbstractCommandLineOpti
             errorReporter.requestedHelp = true
         }
 
-        config.value = when(config.interpretation){
+        config._value = when(config.interpretation){
             FlagInterpretation.FLAG_IS_TRUE -> Value(true)
             FlagInterpretation.FLAG_IS_FALSE -> Value(false)
         }
@@ -31,9 +31,9 @@ internal class ValueCreationVisitor(val allOptions: List<AbstractCommandLineOpti
         val argumentNode = optionNode.argumentNode.children.single() as? ArgumentNode ?: return
 
         val argToken = argumentNode.valueToken
-        val converted = config.converter.tryConvert(config as AbstractCommandLineOption<*>, argToken)
+        val converted = config.converter.tryConvert(config, argToken)
 
-        config.value = Value(converted)
+        config._value = Value(converted)
     }
 
     fun visitEnter(optionNode: ObjectOptionNode) {}
@@ -44,9 +44,9 @@ internal class ValueCreationVisitor(val allOptions: List<AbstractCommandLineOpti
         val argumentNodes = optionNode.arguments.children.filterIsInstance<ArgumentNode>()
 
         val factory = config.factoryOrErrors as UnrolledAndUntypedFactory<*>
-        val converted = factory.tryMake(config as AbstractCommandLineOption<*>, argumentNodes.map { it.valueToken })
+        val converted = factory.tryMake(config, argumentNodes.map { it.valueToken })
 
-        config.value = Value(converted)
+        config._value = Value(converted)
     }
 
     fun visitEnter(optionNode: ListOptionNode) {}
@@ -75,7 +75,7 @@ internal class ValueCreationVisitor(val allOptions: List<AbstractCommandLineOpti
 
         //note: I might have polluted this list with nulls for a not-nullable type.
         // TODO: some kind of flag to return early?
-        config.value = @Suppress("UNCHECKED_CAST") (Value(instances) as ValueStrategy<Nothing>)
+        config._value = @Suppress("UNCHECKED_CAST") (Value(instances) as ValueStrategy<Nothing>)
     }
 
     fun visitEnter(argumentNode: ArgumentNode) {}

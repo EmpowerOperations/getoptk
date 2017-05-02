@@ -9,6 +9,8 @@ import kotlin.reflect.KVisibility
 
 sealed class FactorySearchResult<out T>
 
+object NullFactory: FactorySearchResult<Nothing>()
+
 data class FactoryErrorList(val errors: Map<List<KClass<*>>, String>, val node: KClass<*>)
     : FactorySearchResult<Nothing>(), Collection<String> by errors.values {
 

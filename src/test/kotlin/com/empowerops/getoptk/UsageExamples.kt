@@ -7,7 +7,7 @@ import org.junit.Test
 /**
  * Created by Geoff on 2016-10-26.
  */
-class UsageExample {
+class UsageExamples {
 
     @Test fun `when using usage example created initially should parse properly`(){
         //setup

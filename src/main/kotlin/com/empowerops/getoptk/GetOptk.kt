@@ -19,7 +19,25 @@ abstract class CLI {
     internal var optionProperties: List<AbstractCommandLineOption<*>> = emptyList()
     internal val errorReporter = ConfigErrorReporter()
 
-    //EQUALS logic TODO
+    override fun equals(other: Any?): Boolean {
+        if (other !is CLI) return false
+
+        if (optionProperties != other.optionProperties) return false
+
+        if (optionProperties.map { it._value } != other.optionProperties.map { it._value } ) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = optionProperties.hashCode()
+        result = 31 * result + optionProperties.map { it._value }.hashCode()
+        return result
+    }
+
+    override fun toString(): String {
+        return "${javaClass.simpleName}(${optionProperties.joinToString(", ") { it.toKeyValueString() }})"
+    }
 
     companion object {
 
@@ -135,8 +153,6 @@ abstract class CLI {
             }
         }
     }
-
-    
 }
 
 /**

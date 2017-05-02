@@ -1,6 +1,5 @@
 package com.empowerops.getoptk
 
-import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 import kotlin.reflect.full.cast
@@ -39,44 +38,43 @@ internal sealed class AbstractCommandLineOption<out T>: CommandLineOption<T> {
         thisRef.optionProperties += this
     }
 
-    internal var value: ValueStrategy<@UnsafeVariance T> = NoValue
-    @Suppress("UNCHECKED_CAST") final override operator fun getValue(thisRef: CLI, property: KProperty<*>): T {
+    var _value: ValueStrategy<@UnsafeVariance T> = NoValue
+    var value: @UnsafeVariance T
+        get() {
+            val valWrapper = _value
 
-        val valWrapper = value
-
-        val result = when(valWrapper){
-            is Value -> valWrapper.value
-            is Provider -> {
-                val provided = valWrapper.provider()
-                //TODO: synchronization? exceptions?
-                this.value = Value(provided)
-                provided
+            val result = when(valWrapper){
+                is Value -> valWrapper.value
+                is Provider -> {
+                    val provided = valWrapper.provider.value
+                    //TODO: synchronization? exceptions?
+                    _value = Value(provided)
+                    provided
+                }
+                NoValue -> throw IllegalStateException("no value for ${this.toPropertyDescriptor()}")
             }
-            NoValue -> throw IllegalStateException("no value for ${this.toPropertyDescriptor()}")
-        }
 
-        //cant do that since `optionType` is the element type on the list property
-        // (and ofc `result` is a list instance)
-//        require(optionType.isInstance(result))
-        return result
-    }
+            if(this !is ListOptionConfigurationImpl<*>) require(optionType.isInstance(result) || result == null)
+
+            return result
+        }
+        set(newValue) { _value = Value(newValue) }
+
+    val valueString: String get() = if(_value == NoValue) UNINITIALIZED.toString() else value.toString()
+
+    final override operator fun getValue(thisRef: CLI, property: KProperty<*>): T = value
+
+    fun toKeyValueString() = "${property.name}=$valueString"
 }
 
 
-sealed class ValueStrategy<out T>
-object NoValue : ValueStrategy<Nothing>()
-class Provider<T>(val provider: () -> T): ValueStrategy<T>()
-class Value<T>(val value: T): ValueStrategy<T>()
-
-
-internal class BooleanOptionConfigurationImpl(
-        val userConfig: BooleanOptionConfiguration.() -> Unit
+internal data class BooleanOptionConfigurationImpl(
+        val userConfig: BooleanOptionConfiguration.() -> Unit,
+        override var interpretation: FlagInterpretation = FlagInterpretation.FLAG_IS_TRUE,
+        override val optionType: KClass<Boolean> = Boolean::class,
+        override var isHelp: Boolean = false,
+        override var isRequired: Boolean  = false
 ) : AbstractCommandLineOption<Boolean>(), BooleanOptionConfiguration {
-
-    override lateinit var interpretation: FlagInterpretation
-    override val optionType = Boolean::class
-    override var isHelp = false
-    override var isRequired = false
     
     init {
         hasArgument = false
@@ -84,26 +82,24 @@ internal class BooleanOptionConfigurationImpl(
 
     override fun applyAdditionalConfiguration(thisRef: CLI, prop: KProperty<*>?) {
 
-        interpretation = FlagInterpretation.FLAG_IS_TRUE
-
         userConfig()
 
-        value = Value(when(interpretation){
+        _value = Value(when(interpretation){
             FlagInterpretation.FLAG_IS_TRUE -> false
             FlagInterpretation.FLAG_IS_FALSE -> true
         })
     }
 }
-internal class ValueOptionConfigurationImpl<T: Any>(
+
+internal data class ValueOptionConfigurationImpl<T: Any>(
         override val optionType: KClass<T>,
-        val userConfig: ValueOptionConfiguration<T>.() -> Unit
+        val userConfig: ValueOptionConfiguration<T>.() -> Unit,
+        override var isRequired: Boolean = true
 ) : AbstractCommandLineOption<T>(), ValueOptionConfiguration<T>, ValueOrNullableValueConfiguration<T> {
 
+    override var converter: Converter<T> = DefaultConverters[optionType] ?: InvalidConverter
+
     private var _default: Any = DefaultValues[optionType] ?: UNINITIALIZED
-
-    override var isRequired: Boolean = true
-    override lateinit var converter: Converter<T>
-
     override var default: T
         get(){
             if (_default != UNINITIALIZED) @Suppress("UNCHECKED_CAST") return _default as T
@@ -114,48 +110,41 @@ internal class ValueOptionConfigurationImpl<T: Any>(
         }
 
     override fun applyAdditionalConfiguration(thisRef: CLI, prop: KProperty<*>?) {
-        converter = DefaultConverters[optionType] ?: InvalidConverter
 
         userConfig()
 
-        value = if(_default != UNINITIALIZED) Value(default) else NoValue
+        _value = if(_default != UNINITIALIZED) Value(default) else NoValue
     }
 }
 
-
-internal class NullableValueOptionConfigurationImpl<T: Any>(
+internal data class NullableValueOptionConfigurationImpl<T: Any>(
         override val optionType: KClass<T>,
-        val userConfig: NullableValueOptionConfiguration<T>.() -> Unit
+        val userConfig: NullableValueOptionConfiguration<T>.() -> Unit,
+        override var isRequired: Boolean = false
 ) : AbstractCommandLineOption<T?>(), NullableValueOptionConfiguration<T>, ValueOrNullableValueConfiguration<T?> {
 
-    override lateinit var converter: Converter<T?>
+    override var converter: Converter<T?> = DefaultConverters[optionType] ?: InvalidConverter
     override var default: T? = DefaultValues[optionType]
-    override var isRequired: Boolean = false
 
     override fun applyAdditionalConfiguration(thisRef: CLI, prop: KProperty<*>?) {
-        converter = DefaultConverters[optionType] ?: InvalidConverter
 
         userConfig()
 
-        value = Value(default)
+        _value = Value(default)
     }
 }
 
-internal class ListOptionConfigurationImpl<E: Any>(
+internal data class ListOptionConfigurationImpl<E: Any>(
         override val optionType: KClass<E>,
-        val userConfig: ListOptionConfiguration<E>.() -> Unit
+        val userConfig: ListOptionConfiguration<E>.() -> Unit,
+        override var parseMode: ListSpreadMode<E> = Varargs(DefaultConverters[optionType] ?: InvalidConverter),
+        override var isRequired: Boolean = true
 ) : AbstractCommandLineOption<List<E>>(), ListOptionConfiguration<E>{
 
-    override lateinit var parseMode: ListSpreadMode<E>
-
-    var factoryOrErrors: FactorySearchResult<E>? = null
-    var converter: Converter<E>? = null
-
-    override var isRequired: Boolean = true
-
+    var converter: Converter<E> = InvalidConverter
+    var factoryOrErrors: FactorySearchResult<E> = NullFactory
+    
     override fun applyAdditionalConfiguration(thisRef: CLI, prop: KProperty<*>?) {
-
-        parseMode = Varargs(DefaultConverters[optionType] ?: InvalidConverter)
 
         userConfig()
 
@@ -169,18 +158,16 @@ internal class ListOptionConfigurationImpl<E: Any>(
     }
 }
 
-internal class ObjectOptionConfigurationImpl<T: Any>(
+internal data class ObjectOptionConfigurationImpl<T: Any>(
         override val optionType: KClass<T>,
-        val userConfig: ObjectOptionConfigurationImpl<T>.() -> Unit
+        val userConfig: ObjectOptionConfigurationImpl<T>.() -> Unit,
+        override var isRequired: Boolean = true
 ) : AbstractCommandLineOption<T>(), ObjectOptionConfiguration<T>, ObjectOrNullableObjectConfiguration<T> {
 
-    private var _default: Any = UNINITIALIZED
-
     override var converters: ConverterSet = ConverterSet(emptyMap())
-    override lateinit var factoryOrErrors: FactorySearchResult<T>
+    override var factoryOrErrors: FactorySearchResult<T> = NullFactory
 
-    override var isRequired: Boolean = true
-
+    private var _default: Any = UNINITIALIZED
     override var default: T
         get(){
             if (_default != UNINITIALIZED) @Suppress("UNCHECKED_CAST") return _default as T
@@ -196,14 +183,12 @@ internal class ObjectOptionConfigurationImpl<T: Any>(
 
     override fun applyAdditionalConfiguration(thisRef: CLI, prop: KProperty<*>?) {
 
-        val errorReporter = thisRef.errorReporter
-
         userConfig()
 
         //this line must be done after the user has been allowed to configure the converters
         factoryOrErrors = makeFactoryFor(optionType, converters)
 
-        value = if(_default != UNINITIALIZED) {
+        _value = if(_default != UNINITIALIZED) {
             Value(default)
         }
         else {
@@ -219,16 +204,15 @@ internal class ObjectOptionConfigurationImpl<T: Any>(
     }
 }
 
-internal class NullableObjectOptionConfigurationImpl<T: Any>(
+internal data class NullableObjectOptionConfigurationImpl<T: Any>(
         override val optionType: KClass<T>,
-        val userConfig: NullableObjectOptionConfiguration<T>.() -> Unit
+        val userConfig: NullableObjectOptionConfiguration<T>.() -> Unit,
+        override var isRequired: Boolean = false
 ) : AbstractCommandLineOption<T?>(), NullableObjectOptionConfiguration<T>, ObjectOrNullableObjectConfiguration<T?> {
 
     override var default: T? = DefaultValues[optionType]
-    override var isRequired: Boolean = false
-
     override var converters: ConverterSet = ConverterSet(emptyMap())
-    override lateinit var factoryOrErrors: FactorySearchResult<T?>
+    override var factoryOrErrors: FactorySearchResult<T?> = NullFactory
 
     override fun <N : Any> registerConverter(type: KClass<N>, converter: Converter<N?>) {
         converters += type to converter
@@ -241,10 +225,9 @@ internal class NullableObjectOptionConfigurationImpl<T: Any>(
         //this line must be done after the user has been allowed to configure the converters
         factoryOrErrors = makeFactoryFor(optionType, converters)
 
-        value = Value(default)
+        _value = Value(default)
     }
 }
-
 
 internal interface ObjectOrNullableObjectConfiguration<T> {
     val converters: ConverterSet
@@ -253,3 +236,17 @@ internal interface ObjectOrNullableObjectConfiguration<T> {
 internal interface ValueOrNullableValueConfiguration<T>{
     val converter: Converter<T>
 }
+
+sealed class ValueStrategy<out T>
+object NoValue : ValueStrategy<Nothing>()
+class Provider<out T>(val provider: Lazy<T>): ValueStrategy<T>() {
+    constructor(initializer: () -> T): this(lazy(initializer))
+
+    override fun equals(other: Any?): Boolean {
+        if(other !is Provider<*>) return false
+        return provider.value == other.provider.value
+    }
+
+    override fun hashCode() = provider.value?.hashCode() ?: -1
+}
+data class Value<out T>(val value: T): ValueStrategy<T>()

@@ -5,7 +5,7 @@ import org.assertj.core.api.Assertions.*
 import org.junit.Test
 import java.lang.UnsupportedOperationException
 
-class ErrorExamples {
+class DefaultErrorHandlingFixture {
 
     @Test fun `when two cli classes have args that map to the same name should get configuration error`(){
 

@@ -200,9 +200,9 @@ internal class Parser(
         return@analyzing ArgumentListNode(nodes)
     }
     
-    fun <T> parseObjectArgList(
-            spec: AbstractCommandLineOption<T>,
-            factory: UnrolledAndUntypedFactory<T>,
+    fun parseObjectArgList(
+            spec: AbstractCommandLineOption<*>,
+            factory: UnrolledAndUntypedFactory<*>,
             tokens: List<Token>
     ): ParseNode = analyzing(tokens){                
 

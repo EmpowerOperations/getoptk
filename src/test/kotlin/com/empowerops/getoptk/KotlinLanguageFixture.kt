@@ -52,4 +52,11 @@ class KotlinLanguageFixture {
             return 4;
         }
     }
+
+    @Test fun `lazys do not implement equality`(){
+        val first = lazy { 42 }
+        val second = lazy { 42 }
+
+        assertThat(first).isNotEqualTo(second)
+    }
 }

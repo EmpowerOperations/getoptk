@@ -50,10 +50,10 @@ internal fun AbstractCommandLineOption<*>.toPropertyDescriptor(): String {
     return "$valOrVarPrefix $name: $type by $getOptFlavour()"
 }
 
-internal fun makeHelpOption(otherOptions: List<AbstractCommandLineOption<*>>) = BooleanOptionConfigurationImpl {
+internal fun makeHelpOption(otherOptions: List<AbstractCommandLineOption<*>>) = BooleanOptionConfigurationImpl({
     longName = if(otherOptions.any { it.longName == "help" }) "" else "help"
     shortName = if(otherOptions.any { it.shortName == "h" }) "" else "h"
     isHelp = true
     isRequired = false
-}
+})
 
