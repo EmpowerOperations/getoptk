@@ -4,6 +4,8 @@ import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 
+interface CommandLineOption<out T>: ReadOnlyProperty<CLI, T>
+
 interface ObjectOptionConfiguration<T>: ReadOnlyProperty<CLI, T> {
     var description: String
     var shortName: String
@@ -18,7 +20,7 @@ inline fun <reified N> ObjectOptionConfiguration<*>.registerConverter(noinline c
         = registerConverter(N::class, converter)
 
 
-interface NullableObjectOptionConfiguration<T>: ReadOnlyProperty<CLI, T?> {
+interface NullableObjectOptionConfiguration<T>: CommandLineOption<T?> {
     var description: String
     var shortName: String
     var longName: String
@@ -32,7 +34,7 @@ inline fun <reified N> NullableObjectOptionConfiguration<*>.registerConverter(no
         = registerConverter(N::class, converter)
 
 
-interface ValueOptionConfiguration<T>: ReadOnlyProperty<CLI, T> {
+interface ValueOptionConfiguration<T>: CommandLineOption<T> {
     var converter: Converter<T>
     var shortName: String
     var longName: String
@@ -42,7 +44,7 @@ interface ValueOptionConfiguration<T>: ReadOnlyProperty<CLI, T> {
     var default: T
 }
 
-interface NullableValueOptionConfiguration<T: Any>: ReadOnlyProperty<CLI, T?> {
+interface NullableValueOptionConfiguration<T: Any>: CommandLineOption<T?> {
 
     var converter: Converter<T?>
     var shortName: String
@@ -54,7 +56,7 @@ interface NullableValueOptionConfiguration<T: Any>: ReadOnlyProperty<CLI, T?> {
 }
 
 
-interface ListOptionConfiguration<E: Any>: ReadOnlyProperty<CLI, List<E>>{
+interface ListOptionConfiguration<E: Any>: CommandLineOption<List<E>>{
 
     var description: String
     var shortName: String

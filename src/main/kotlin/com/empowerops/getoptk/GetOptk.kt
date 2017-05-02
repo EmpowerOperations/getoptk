@@ -16,7 +16,7 @@ import kotlin.reflect.KClass
 abstract class CLI {
 
     //TODO: this should use reference equality on the CLI object.
-    internal var optionProperties: List<CommandLineOption<*>> = emptyList()
+    internal var optionProperties: List<AbstractCommandLineOption<*>> = emptyList()
     internal val errorReporter = ConfigErrorReporter()
 
     //EQUALS logic TODO
@@ -43,7 +43,7 @@ abstract class CLI {
 
             val cmd = hostFactory()
 
-            var opts: List<CommandLineOption<*>> = cmd.optionProperties
+            var opts: List<AbstractCommandLineOption<*>> = cmd.optionProperties
 
             if(opts.filterIsInstance<BooleanOptionConfiguration>().all { ! it.isHelp }) {
                 opts += makeHelpOption(opts).apply { applyAdditionalConfiguration(cmd, prop = null) }
@@ -73,7 +73,7 @@ abstract class CLI {
                 altHandler(ParseFailure(parseErrorReporter.parsingProblems))
             }
 
-            val requiredButNotSpecifiedOptions = visitor.unconsumedOptions.filter { it.isRequired }
+            val requiredButNotSpecifiedOptions: List<AbstractCommandLineOption<*>> = visitor.unconsumedOptions.filter { it.isRequired }
             if(requiredButNotSpecifiedOptions.any()){
                 altHandler(MissingOptions(requiredButNotSpecifiedOptions))
             }
@@ -81,10 +81,10 @@ abstract class CLI {
             return cmd
         }
 
-        private fun makeHelpMessage(programName: String, opts: List<CommandLineOption<*>>): String{
+        private fun makeHelpMessage(programName: String, opts: List<AbstractCommandLineOption<*>>): String{
             val stg = STGroupFile("com/empowerops/getoptk/HelpMessage.stg", "UTF-8").apply {
                 registerModelAdaptor(String::class.java, StringExtensionFunctionsAdapter)
-                registerModelAdaptor(CommandLineOption::class.java, OptionExtensionFunctionsAdapter)
+                registerModelAdaptor(AbstractCommandLineOption::class.java, OptionExtensionFunctionsAdapter)
             }
 
 
@@ -100,7 +100,7 @@ abstract class CLI {
 
         object OptionExtensionFunctionsAdapter: ObjectModelAdaptor(){
             override fun getProperty(interp: Interpreter?, self: ST, o: Any, property: Any, propertyName: String): Any? {
-                return if(o is CommandLineOption<*> && property == "fillTo30") with(o) {
+                return if(o is AbstractCommandLineOption<*> && property == "fillTo30") with(o) {
                     var length = 30
                     length -= 1
                     if(shortName != ""){
@@ -207,7 +207,7 @@ sealed class SpecialCaseInterpretation
 data class ConfigurationFailure(val configurationProblems: List<ConfigurationProblem>) : SpecialCaseInterpretation()
 data class ParseFailure(val parseProblems: List<ParseProblem>) : SpecialCaseInterpretation()
 data class HelpRequested(val helpMessage: String) : SpecialCaseInterpretation()
-data class MissingOptions(val missingOptions: List<Any>): SpecialCaseInterpretation()
+data class MissingOptions(val missingOptions: List<CommandLineOption<*>>): SpecialCaseInterpretation()
 
 fun throwSpecialCase(specialCase: SpecialCaseInterpretation): Nothing = when(specialCase){
     is ConfigurationFailure -> throw ConfigurationException(specialCase.configurationProblems)
@@ -216,7 +216,7 @@ fun throwSpecialCase(specialCase: SpecialCaseInterpretation): Nothing = when(spe
             specialCase.parseProblems.firstOrNull { it.stackTrace != null}?.stackTrace
     )
     is HelpRequested -> throw HelpException(specialCase.helpMessage)
-    is MissingOptions -> throw MissingOptionsException()
+    is MissingOptions -> throw MissingOptionsException(specialCase.missingOptions)
 }
 
 fun ignoreUnrecognized(specialCase: SpecialCaseInterpretation): Unit = when(specialCase){
@@ -230,5 +230,5 @@ fun ignoreUnrecognized(specialCase: SpecialCaseInterpretation): Unit = when(spec
         else Unit
     }
     is HelpRequested -> throw HelpException(specialCase.helpMessage)
-    is MissingOptions -> throw MissingOptionsException()
+    is MissingOptions -> throw MissingOptionsException(specialCase.missingOptions)
 }

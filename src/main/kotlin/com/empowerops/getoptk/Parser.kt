@@ -1,6 +1,5 @@
 package com.empowerops.getoptk
 
-import com.sun.org.apache.xpath.internal.Arg
 import kotlin.coroutines.experimental.buildSequence
 
 
@@ -27,7 +26,7 @@ import kotlin.coroutines.experimental.buildSequence
  */
 internal class Parser(
         override val errorReporter: ParseErrorReporter,
-        val componentCombinators: List<CommandLineOption<*>>
+        val componentCombinators: List<AbstractCommandLineOption<*>>
 ): ErrorReporting {
 
     companion object {
@@ -109,7 +108,7 @@ internal class Parser(
      *   -> {config is ObjectOptionConfiguration)?[parseObjectArgList]
      **/
     private fun parseOptionsBackHalf(optName: Token, tokens: List<Token>)
-            : Pair<CommandLineOption<*>?, ParseNode> = analyzing(tokens){
+            : Pair<AbstractCommandLineOption<*>?, ParseNode> = analyzing(tokens){
 
         val config = componentCombinators.firstOrNull { optionSpec ->
             when (optName as? OptionName) {
@@ -167,7 +166,7 @@ internal class Parser(
     private fun makeOptionNode(
             preamble: Token,
             optName: Token,
-            config: CommandLineOption<*>?,
+            config: AbstractCommandLineOption<*>?,
             argumentList: ParseNode
     ): ParseNode = when (config) {
         is BooleanOptionConfigurationImpl -> BooleanOptionNode(         preamble, optName, config)
@@ -202,7 +201,7 @@ internal class Parser(
     }
     
     fun <T> parseObjectArgList(
-            spec: CommandLineOption<T>,
+            spec: AbstractCommandLineOption<T>,
             factory: UnrolledAndUntypedFactory<T>,
             tokens: List<Token>
     ): ParseNode = analyzing(tokens){                
@@ -242,7 +241,7 @@ internal class Parser(
         return@analyzing ArgumentListNode(argList)
     }
 
-    fun parseVarargsList(spec: CommandLineOption<*>, tokens: List<Token>): ArgumentListNode =  analyzing(tokens) {
+    fun parseVarargsList(spec: AbstractCommandLineOption<*>, tokens: List<Token>): ArgumentListNode =  analyzing(tokens) {
         val nodes = buildSequence {
             while (peek() is SuperTokenSeparator && peek(1) is Argument) {
                 val separator = expect<SuperTokenSeparator>()
@@ -255,7 +254,7 @@ internal class Parser(
         return@analyzing ArgumentListNode(nodes)
     }
 
-    private fun availableOptions(componentCombinators: List<CommandLineOption<*>>): String {
+    private fun availableOptions(componentCombinators: List<AbstractCommandLineOption<*>>): String {
         return componentCombinators.flatMap { it.names() }.joinToString("' or '", "'", "'")
     }
 

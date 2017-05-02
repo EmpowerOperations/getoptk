@@ -1,8 +1,8 @@
 package com.empowerops.getoptk
 
-internal class ValueCreationVisitor(val allOptions: List<CommandLineOption<*>>, val errorReporter: ParseErrorReporter) {
+internal class ValueCreationVisitor(val allOptions: List<AbstractCommandLineOption<*>>, val errorReporter: ParseErrorReporter) {
 
-    var unconsumedOptions: List<CommandLineOption<*>> = allOptions
+    var unconsumedOptions: List<AbstractCommandLineOption<*>> = allOptions
         private set
 
     fun visitEnter(cliNode: CLIRootNode) {}
@@ -26,12 +26,12 @@ internal class ValueCreationVisitor(val allOptions: List<CommandLineOption<*>>, 
     fun visitEnter(optionNode: ValueOptionNode) {}
     fun visitLeave(optionNode: ValueOptionNode) {
         val config = optionNode.config ?: return
-        unconsumedOptions -= (config as CommandLineOption<*>)
+        unconsumedOptions -= (config as AbstractCommandLineOption<*>)
         
         val argumentNode = optionNode.argumentNode.children.single() as? ArgumentNode ?: return
 
         val argToken = argumentNode.valueToken
-        val converted = config.converter.tryConvert(config as CommandLineOption<*>, argToken)
+        val converted = config.converter.tryConvert(config as AbstractCommandLineOption<*>, argToken)
 
         config.value = Value(converted)
     }
@@ -39,12 +39,12 @@ internal class ValueCreationVisitor(val allOptions: List<CommandLineOption<*>>, 
     fun visitEnter(optionNode: ObjectOptionNode) {}
     fun visitLeave(optionNode: ObjectOptionNode) {
         val config = optionNode.config ?: return
-        unconsumedOptions -= (config as CommandLineOption<*>)
+        unconsumedOptions -= (config as AbstractCommandLineOption<*>)
 
         val argumentNodes = optionNode.arguments.children.filterIsInstance<ArgumentNode>()
 
         val factory = config.factoryOrErrors as UnrolledAndUntypedFactory<*>
-        val converted = factory.tryMake(config as CommandLineOption<*>, argumentNodes.map { it.valueToken })
+        val converted = factory.tryMake(config as AbstractCommandLineOption<*>, argumentNodes.map { it.valueToken })
 
         config.value = Value(converted)
     }
@@ -52,7 +52,7 @@ internal class ValueCreationVisitor(val allOptions: List<CommandLineOption<*>>, 
     fun visitEnter(optionNode: ListOptionNode) {}
     fun visitLeave(optionNode: ListOptionNode) {
         val config = optionNode.config ?: return
-        unconsumedOptions -= (config as CommandLineOption<*>)
+        unconsumedOptions -= (config as AbstractCommandLineOption<*>)
         
         val parseMode = config.parseMode
         val argumentTokens = optionNode.arguments.children.filterIsInstance<ArgumentNode>().map { it.valueToken }
@@ -87,7 +87,7 @@ internal class ValueCreationVisitor(val allOptions: List<CommandLineOption<*>>, 
     fun visitEnter(errorNode: ErrorNode) {}
     fun visitLeave(errorNode: ErrorNode) {}
 
-    private fun reportError(token: Token, exception: Exception, config: CommandLineOption<*>? = null){
+    private fun reportError(token: Token, exception: Exception, config: AbstractCommandLineOption<*>? = null){
 
         // I really cant stand the idea of catching debugging-oriented errors,
         // so I'm going to throw them immediately.
@@ -100,11 +100,11 @@ internal class ValueCreationVisitor(val allOptions: List<CommandLineOption<*>>, 
         }
     }
     
-    fun <T> Converter<T>.tryConvert(config: CommandLineOption<T>, token: Token): Any?
+    fun <T> Converter<T>.tryConvert(config: AbstractCommandLineOption<T>, token: Token): Any?
             = try { this.invoke(token.text) }
             catch(ex: Exception) { reportError(token, ex, config); null }
 
-    fun <T> UnrolledAndUntypedFactory<T>.tryMake(config: CommandLineOption<T>, args: List<Token>): Any?
+    fun <T> UnrolledAndUntypedFactory<T>.tryMake(config: AbstractCommandLineOption<T>, args: List<Token>): Any?
             = try { this.make(args.map { it.text } ) }
             catch(ex: Exception) {
                 val token = (ex as? FactoryCreateFailed)?.index?.let { args[it] } ?: args.first()

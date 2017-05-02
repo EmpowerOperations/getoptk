@@ -41,7 +41,7 @@ internal data class ArgumentListNode(
 
 internal data class ArgumentNode(
         val separator: Token,
-        val config: CommandLineOption<*>,
+        val config: AbstractCommandLineOption<*>,
         val valueToken: Token
 ): ParseNode()
 

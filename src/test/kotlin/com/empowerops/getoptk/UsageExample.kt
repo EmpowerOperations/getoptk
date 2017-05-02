@@ -304,6 +304,7 @@ class UsageExample {
         val nullable: SimpleDTO? by getNullableOpt()
         val nonNullable: SimpleDTO by getOpt {
             default = SimpleDTO(1, 2.0)
+            isRequired = false
             shortName = "no"
         }
         val valueType: Double by getValueOpt {

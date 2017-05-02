@@ -4,7 +4,7 @@ package com.empowerops.getoptk
  * Created by Geoff on 2017-03-04.
  */
 
-internal fun ConfigErrorReporter.validateNewEntry(existingOptions: List<CommandLineOption<*>>, newOption: CommandLineOption<*>){
+internal fun ConfigErrorReporter.validateNewEntry(existingOptions: List<AbstractCommandLineOption<*>>, newOption: AbstractCommandLineOption<*>){
 
     // TODO: create exceptions. Note that this method is called from `getOpt()`,
     // meaning a stack trace here points to the specific line :D
@@ -13,9 +13,9 @@ internal fun ConfigErrorReporter.validateNewEntry(existingOptions: List<CommandL
     checkConverter(newOption)
 }
 
-private fun ConfigErrorReporter.checkConverter(newOption: CommandLineOption<*>) {
+private fun ConfigErrorReporter.checkConverter(newOption: AbstractCommandLineOption<*>) {
 
-    fun reportBadFactory(option: CommandLineOption<*>, factoryOrErrors: FactoryErrorList){
+    fun reportBadFactory(option: AbstractCommandLineOption<*>, factoryOrErrors: FactoryErrorList){
         reportConfigProblem("option '${option.toPropertyDescriptor()}' cannot be built:\n" + factoryOrErrors.toDescription())
     }
     fun reportBadConverter() = reportConfigProblem(
@@ -53,7 +53,7 @@ private fun ConfigErrorReporter.checkConverter(newOption: CommandLineOption<*>) 
     }
 }
 
-private fun ConfigErrorReporter.checkNames(existingOptions: List<CommandLineOption<*>>, newOption: CommandLineOption<*>) {
+private fun ConfigErrorReporter.checkNames(existingOptions: List<AbstractCommandLineOption<*>>, newOption: AbstractCommandLineOption<*>) {
     if (newOption.shortName.isEmpty()) {
         reportConfigProblem("option '${newOption.toPropertyDescriptor()}' has the empty string as its short name")
     }

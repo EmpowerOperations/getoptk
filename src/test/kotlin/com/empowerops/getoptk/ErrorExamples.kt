@@ -1,5 +1,6 @@
 package com.empowerops.getoptk
 
+import org.assertj.core.api.AbstractThrowableAssert
 import org.assertj.core.api.Assertions.*
 import org.junit.Test
 import java.lang.UnsupportedOperationException
@@ -32,7 +33,7 @@ class ErrorExamples {
 
         //assert
         assertThat(ex.message).isEqualTo(
-                """Failed to parse value for val eh: A by getValueOpt()
+                """Failed to parse value for val eh: A by getOpt()
                   |prog --eh hello_world 1.0
                   |at:                   ~~~
                   |java.lang.NumberFormatException: For input string: "1.0"
@@ -127,14 +128,20 @@ class ErrorExamples {
         val ex = assertThrows<MissingOptionsException> { args.parsedAs("prog") { TwoRequiredFieldCLI() } }
 
         //assert
-        TODO("assert that ex has nice message")
+        assertThat(ex)
+                .isInstanceOf2<MissingOptionsException>()
+                .hasMessage("missing options: 'req2', 'req3'")
     }
     class TwoRequiredFieldCLI: CLI(){
         val req1: String by getValueOpt()
         val req2: String by getValueOpt {
             shortName = "r2"
         }
+        val req3: String by getValueOpt {
+            shortName = "r3"
+        }
     }
 }
+
 
 

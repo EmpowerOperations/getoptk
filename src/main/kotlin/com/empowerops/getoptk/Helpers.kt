@@ -19,11 +19,11 @@ operator fun BooleanOptionConfiguration.provideDelegate(thisRef: CLI, prop: KPro
 //endregion
 
 internal fun <T, E> provideDelegateImpl(host: T, thisRef: CLI, prop: KProperty<*>): T where T: ReadOnlyProperty<CLI, E> {
-    (host as CommandLineOption<*>).provideDelegateImpl(thisRef, prop)
+    (host as AbstractCommandLineOption<*>).provideDelegateImpl(thisRef, prop)
     return host
 }
 
-internal val CommandLineOption<*>.factoryOrErrors: FactorySearchResult<*> get() = when(this){
+internal val AbstractCommandLineOption<*>.factoryOrErrors: FactorySearchResult<*> get() = when(this){
     is ObjectOptionConfigurationImpl<*> -> this.factoryOrErrors
     is NullableObjectOptionConfigurationImpl<*> -> this.factoryOrErrors
     else -> TODO()
@@ -31,8 +31,8 @@ internal val CommandLineOption<*>.factoryOrErrors: FactorySearchResult<*> get() 
 
 internal object UNINITIALIZED
 
-internal fun CommandLineOption<*>.names() = listOf(shortName, longName)
-internal fun CommandLineOption<*>.toPropertyDescriptor(): String {
+internal fun AbstractCommandLineOption<*>.names() = listOf(shortName, longName)
+internal fun AbstractCommandLineOption<*>.toPropertyDescriptor(): String {
     val valOrVarPrefix = if(property.isFinal) "val" else "var"
 
     val name = property.name
@@ -50,7 +50,7 @@ internal fun CommandLineOption<*>.toPropertyDescriptor(): String {
     return "$valOrVarPrefix $name: $type by $getOptFlavour()"
 }
 
-internal fun makeHelpOption(otherOptions: List<CommandLineOption<*>>) = BooleanOptionConfigurationImpl {
+internal fun makeHelpOption(otherOptions: List<AbstractCommandLineOption<*>>) = BooleanOptionConfigurationImpl {
     longName = if(otherOptions.any { it.longName == "help" }) "" else "help"
     shortName = if(otherOptions.any { it.shortName == "h" }) "" else "h"
     isHelp = true

@@ -68,9 +68,11 @@ class ConfigurationException(val messages: List<ConfigurationProblem>)
 class ParseFailedException(val messages: List<String>, cause: Exception?)
     : RuntimeException(messages.joinToString("\n\n"), cause)
 
-class HelpException(message: String) : RuntimeException(message)
+class HelpException(message: String)
+    : RuntimeException(message)
 
-class MissingOptionsException: RuntimeException()
+class MissingOptionsException(missingOptions: List<CommandLineOption<*>>)
+    : RuntimeException("missing options: " + (missingOptions.map { (it as AbstractCommandLineOption<*>).longName }).joinToString("', '", "'", "'"))
 
 private class ConfigurationExceptionCause: RuntimeException("Configuration Exception")
 private class ParseExceptionCause: RuntimeException("Parse Exception")

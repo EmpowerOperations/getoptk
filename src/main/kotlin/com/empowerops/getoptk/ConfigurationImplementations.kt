@@ -8,7 +8,7 @@ import kotlin.reflect.full.cast
 /**
  * Created by Geoff on 2017-04-29.
  */
-internal sealed class CommandLineOption<out T>: ReadOnlyProperty<CLI, T> {
+internal sealed class AbstractCommandLineOption<out T>: CommandLineOption<T> {
 
     lateinit var property: KProperty<*>
 
@@ -55,7 +55,9 @@ internal sealed class CommandLineOption<out T>: ReadOnlyProperty<CLI, T> {
             NoValue -> throw IllegalStateException("no value for ${this.toPropertyDescriptor()}")
         }
 
-        require(optionType.isInstance(result))
+        //cant do that since `optionType` is the element type on the list property
+        // (and ofc `result` is a list instance)
+//        require(optionType.isInstance(result))
         return result
     }
 }
@@ -69,12 +71,12 @@ class Value<T>(val value: T): ValueStrategy<T>()
 
 internal class BooleanOptionConfigurationImpl(
         val userConfig: BooleanOptionConfiguration.() -> Unit
-) : CommandLineOption<Boolean>(), BooleanOptionConfiguration {
+) : AbstractCommandLineOption<Boolean>(), BooleanOptionConfiguration {
 
     override lateinit var interpretation: FlagInterpretation
     override val optionType = Boolean::class
     override var isHelp = false
-    override var isRequired = true
+    override var isRequired = false
     
     init {
         hasArgument = false
@@ -95,7 +97,7 @@ internal class BooleanOptionConfigurationImpl(
 internal class ValueOptionConfigurationImpl<T: Any>(
         override val optionType: KClass<T>,
         val userConfig: ValueOptionConfiguration<T>.() -> Unit
-) : CommandLineOption<T>(), ValueOptionConfiguration<T>, ValueOrNullableValueConfiguration<T> {
+) : AbstractCommandLineOption<T>(), ValueOptionConfiguration<T>, ValueOrNullableValueConfiguration<T> {
 
     private var _default: Any = DefaultValues[optionType] ?: UNINITIALIZED
 
@@ -124,7 +126,7 @@ internal class ValueOptionConfigurationImpl<T: Any>(
 internal class NullableValueOptionConfigurationImpl<T: Any>(
         override val optionType: KClass<T>,
         val userConfig: NullableValueOptionConfiguration<T>.() -> Unit
-) : CommandLineOption<T?>(), NullableValueOptionConfiguration<T>, ValueOrNullableValueConfiguration<T?> {
+) : AbstractCommandLineOption<T?>(), NullableValueOptionConfiguration<T>, ValueOrNullableValueConfiguration<T?> {
 
     override lateinit var converter: Converter<T?>
     override var default: T? = DefaultValues[optionType]
@@ -142,7 +144,7 @@ internal class NullableValueOptionConfigurationImpl<T: Any>(
 internal class ListOptionConfigurationImpl<E: Any>(
         override val optionType: KClass<E>,
         val userConfig: ListOptionConfiguration<E>.() -> Unit
-) : CommandLineOption<List<E>>(), ListOptionConfiguration<E>{
+) : AbstractCommandLineOption<List<E>>(), ListOptionConfiguration<E>{
 
     override lateinit var parseMode: ListSpreadMode<E>
 
@@ -170,7 +172,7 @@ internal class ListOptionConfigurationImpl<E: Any>(
 internal class ObjectOptionConfigurationImpl<T: Any>(
         override val optionType: KClass<T>,
         val userConfig: ObjectOptionConfigurationImpl<T>.() -> Unit
-) : CommandLineOption<T>(), ObjectOptionConfiguration<T>, ObjectOrNullableObjectConfiguration<T> {
+) : AbstractCommandLineOption<T>(), ObjectOptionConfiguration<T>, ObjectOrNullableObjectConfiguration<T> {
 
     private var _default: Any = UNINITIALIZED
 
@@ -220,7 +222,7 @@ internal class ObjectOptionConfigurationImpl<T: Any>(
 internal class NullableObjectOptionConfigurationImpl<T: Any>(
         override val optionType: KClass<T>,
         val userConfig: NullableObjectOptionConfiguration<T>.() -> Unit
-) : CommandLineOption<T?>(), NullableObjectOptionConfiguration<T>, ObjectOrNullableObjectConfiguration<T?> {
+) : AbstractCommandLineOption<T?>(), NullableObjectOptionConfiguration<T>, ObjectOrNullableObjectConfiguration<T?> {
 
     override var default: T? = DefaultValues[optionType]
     override var isRequired: Boolean = false
