@@ -59,4 +59,12 @@ class KotlinLanguageFixture {
 
         assertThat(first).isNotEqualTo(second)
     }
+
+    lateinit var neverset: Any;
+
+    @Test fun `when calling unititialized lateinit var should get nice exception`(){
+        val ex = assertThrows<UninitializedPropertyAccessException>{ neverset }
+
+        assertThat(ex.message).isEqualTo("lateinit property neverset has not been initialized")
+    }
 }

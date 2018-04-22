@@ -1,27 +1,52 @@
 package com.empowerops.getoptk
 
-import org.assertj.core.api.Assertions.*
+import org.assertj.core.api.Assertions
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.lang.UnsupportedOperationException
+import java.nio.file.Path
 
-class DefaultErrorHandlingFixture {
+class RuntimeErrorHandlingFixture {
 
-    @Test fun `when two cli classes have args that map to the same name should get configuration error`(){
-
-        //setup & act
-        val ex = assertThrows<ConfigurationException> {
-            emptyArray<String>().parsedAs("prog") { DuplicateInferredNamesArgBundle() }
+    class Thingy: CLI() {
+        val required by getOpt<Int>(){
+            isRequired = true
         }
+        val notRequired by getNullableOpt<Int>(){
+            isRequired = false
+        }
+    }
+
+    @Test fun `when parsing arguments that dont include required argument should raise error`(){
+        //setup
+        val args = emptyArray<String>()
+
+        //act
+        val ex = assertThrows<MissingOptionsException> { args.parsedAs("program") { Thingy() } }
 
         //assert
-        assertThat(ex.messages.single().message).isEqualTo(
-                "the options 'val excess: String by getValueOpt()' and 'val extra: String by getValueOpt()' have the same short name 'e'."
+        assertThat(ex.message).isEqualTo("""Missing options: 'required'
+                |usage: prog.exe
+                |  -r,--required <int>
+                |  -n,--notRequired <int>
+                """.trimMargin()
         )
     }
-    class DuplicateInferredNamesArgBundle : CLI(){
-        val extra: String by getValueOpt<String>()
-        val excess: String by getValueOpt()
+
+    class ListableThingy: CLI(){
+        val someList by getListOpt<Double>()
     }
+    @Test fun `when parsing empty command line for list should get back empty list`(){
+        //setup
+        val args = emptyArray<String>()
+
+        //act
+        val result = args.parsedAs("program") { ListableThingy() }
+
+        //assert
+        assertThat(result.someList).isEqualTo(emptyList<Double>())
+    }
+
 
     @Test fun `when using the wrong type to destructure should generate unconsumed tokens warnings`(){
 
@@ -100,31 +125,6 @@ class DefaultErrorHandlingFixture {
         }
     }
 
-    @Test fun `when configuration throws exception should collect all problems and report them at the same time`(){
-        val args = arrayOf("")
-
-        //act
-        val ex = assertThrows<ConfigurationException> { args.parsedAs("prog") { ExplosiveCLI() } }
-
-        //assert
-        assertThat(ex).isInstanceOf2<ConfigurationException>()
-        assertThat(ex.message).isEqualTo("""CLI configuration errors:
-                |specification for 'first' threw java.lang.NumberFormatException: For input string: "twenty-three"
-                |specification for 'second' threw java.lang.NumberFormatException: For input string: "33.4"
-                """.trimMargin()
-        )
-    }
-
-    class ExplosiveCLI: CLI(){
-        val first: Double by getOpt {
-            default = "twenty-three".toDouble()
-        }
-
-        val second: Int by getOpt {
-            default = "33.4".toInt()
-        }
-    }
-
     @Test fun `when command line fails to specify an argument should properly format`(){
         val args = arrayOf("--req1", "val1")
 
@@ -145,7 +145,24 @@ class DefaultErrorHandlingFixture {
             shortName = "r3"
         }
     }
+
+    @Test fun `when using nonnull not required option should throw exception on value retrieval`(){
+        //setup
+        val args = emptyArray<String>()
+
+        //act
+        val result = args.parsedAs("program") { OneNonnullOptionalFieldCLI() }
+        val ex = assertThrows<UninitializedPropertyAccessException> { result.optional1 }
+
+        //assert
+        assertThat(ex.message).isEqualTo("getValueOpt property optional1 has not been initialized")
+    }
+    class OneNonnullOptionalFieldCLI: CLI(){
+        val optional1: NonDefaulted by getOpt() {
+            isRequired = false
+        }
+    }
+    class NonDefaulted(val arg: String)
+
+
 }
-
-
-

@@ -214,7 +214,7 @@ internal class Parser(
 
         while(peek() is SuperTokenSeparator && peek(1) is Argument){
 
-            if(factory.argCount evenlyDivides index){
+            if(factory.arity evenlyDivides index){
                 popMarkedTokens()
                 pushMark()
             }
@@ -228,13 +228,13 @@ internal class Parser(
         }
 
         argList = when {
-            factory.argCount evenlyDivides argList.size -> {
+            factory.arity evenlyDivides argList.size -> {
                 popMarkedTokens()
                 argList
             }
             else -> {
                 popAndRevertToMark();
-                argList.let { it.subList(0, it.size - (it.size % factory.argCount)) }
+                argList.let { it.subList(0, it.size - (it.size % factory.arity)) }
             }
         }
 

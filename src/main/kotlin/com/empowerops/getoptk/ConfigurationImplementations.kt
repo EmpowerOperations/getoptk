@@ -60,7 +60,7 @@ internal sealed class AbstractCommandLineOption<out T>: CommandLineOption<T> {
         }
         set(newValue) { _value = Value(newValue) }
 
-    val valueString: String get() = if(_value == NoValue) UNINITIALIZED.toString() else value.toString()
+    val valueString: String get() = value.toString()
 
     final override operator fun getValue(thisRef: CLI, property: KProperty<*>): T = value
 
@@ -99,10 +99,10 @@ internal data class ValueOptionConfigurationImpl<T: Any>(
 
     override var converter: Converter<T> = DefaultConverters[optionType] ?: InvalidConverter
 
-    private var _default: Any = DefaultValues[optionType] ?: UNINITIALIZED
+    private var _default: Any = DefaultValues[optionType] ?: NO_DEFAULT_AVAILABLE
     override var default: T
         get(){
-            if (_default != UNINITIALIZED) @Suppress("UNCHECKED_CAST") return _default as T
+            if (_default != NO_DEFAULT_AVAILABLE) @Suppress("UNCHECKED_CAST") return _default as T
             else throw IllegalStateException("'default' is write-only as it currently has no value")
         }
         set(value) {
@@ -113,7 +113,7 @@ internal data class ValueOptionConfigurationImpl<T: Any>(
 
         invokeAndReportErrorsTo(thisRef.errorReporter, this) { userConfig() }
 
-        _value = if(_default != UNINITIALIZED) Value(default) else NoValue
+        _value = if(_default != NO_DEFAULT_AVAILABLE) Value(default) else NoValue
     }
 }
 
@@ -130,7 +130,7 @@ internal data class NullableValueOptionConfigurationImpl<T: Any>(
 
         invokeAndReportErrorsTo(thisRef.errorReporter, this) { userConfig() }
 
-        _value = Value(default)
+        if(_value == NoValue) _value = Value(default)
     }
 }
 
@@ -138,7 +138,8 @@ internal data class ListOptionConfigurationImpl<E: Any>(
         override val optionType: KClass<E>,
         val userConfig: ListOptionConfiguration<E>.() -> Unit,
         override var parseMode: ListSpreadMode<E> = Varargs(DefaultConverters[optionType] ?: InvalidConverter),
-        override var isRequired: Boolean = true
+        override var isRequired: Boolean = false,
+        override var default: List<E> = emptyList()
 ) : AbstractCommandLineOption<List<E>>(), ListOptionConfiguration<E>{
 
     var converter: Converter<E> = InvalidConverter
@@ -147,6 +148,8 @@ internal data class ListOptionConfigurationImpl<E: Any>(
     override fun applyAdditionalConfiguration(thisRef: CLI, prop: KProperty<*>?) {
 
         invokeAndReportErrorsTo(thisRef.errorReporter, this) { userConfig() }
+
+        if(_value == NoValue) _value = Value(default)
 
         //this line must be done after the user has been allowed to configure the converters
         val parseMode = parseMode
@@ -167,10 +170,10 @@ internal data class ObjectOptionConfigurationImpl<T: Any>(
     override var converters: ConverterSet = ConverterSet(emptyMap())
     override var factoryOrErrors: FactorySearchResult<T> = NullFactory
 
-    private var _default: Any = UNINITIALIZED
+    private var _default: Any = NO_DEFAULT_AVAILABLE
     override var default: T
         get(){
-            if (_default != UNINITIALIZED) @Suppress("UNCHECKED_CAST") return _default as T
+            if (_default != NO_DEFAULT_AVAILABLE) @Suppress("UNCHECKED_CAST") return _default as T
             else throw IllegalStateException("'default' is write-only as it currently has no value")
         }
         set(value) {
@@ -188,14 +191,14 @@ internal data class ObjectOptionConfigurationImpl<T: Any>(
         //this line must be done after the user has been allowed to configure the converters
         factoryOrErrors = makeFactoryFor(optionType, converters)
 
-        _value = if(_default != UNINITIALIZED) {
+        _value = if(_default != NO_DEFAULT_AVAILABLE) {
             Value(default)
         }
         else {
-            val factory = makeProviderOf(optionType, converters)
+            val provider = makeProviderOf(optionType, converters)
 
-            if(factory is UnrolledAndUntypedFactory<*>) {
-                Provider { optionType.cast(factory.make(emptyList())) }
+            if(provider is UnrolledAndUntypedFactory<*> && provider.arity == 0) {
+                Provider { optionType.cast(provider.make(emptyList())) }
             }
             else {
                 NoValue
@@ -210,7 +213,7 @@ internal data class NullableObjectOptionConfigurationImpl<T: Any>(
         override var isRequired: Boolean = false
 ) : AbstractCommandLineOption<T?>(), NullableObjectOptionConfiguration<T>, ObjectOrNullableObjectConfiguration<T?> {
 
-    override var default: T? = DefaultValues[optionType]
+    override var default: T? = null
     override var converters: ConverterSet = ConverterSet(emptyMap())
     override var factoryOrErrors: FactorySearchResult<T?> = NullFactory
 
@@ -238,7 +241,9 @@ internal interface ValueOrNullableValueConfiguration<T>{
 }
 
 sealed class ValueStrategy<out T>
-object NoValue : ValueStrategy<Nothing>()
+object NoValue : ValueStrategy<Nothing>() {
+    override fun toString() = "[no value set]"
+}
 class Provider<out T>(val provider: Lazy<T>): ValueStrategy<T>() {
     constructor(initializer: () -> T): this(lazy(initializer))
 

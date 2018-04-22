@@ -6,15 +6,27 @@ import kotlin.reflect.KProperty
 
 
 //region provideDelegate
-// these methods must be public & discoverable by kotlin runtime!
-// do not try to reduce duplication with inheritence
+// these methods must be public & discoverable by kotlin compiler!
+// do not try to reduce duplication with inheritance
 
-operator fun <T: Any> ValueOptionConfiguration<T>.provideDelegate(thisRef: CLI, prop: KProperty<*>) = provideDelegateImpl(this, thisRef, prop)
-operator fun <T: Any> NullableValueOptionConfiguration<T>.provideDelegate(thisRef: CLI, prop: KProperty<*>) = provideDelegateImpl(this, thisRef, prop)
-operator fun <T: Any> ObjectOptionConfiguration<T>.provideDelegate(thisRef: CLI, prop: KProperty<*>) = provideDelegateImpl(this, thisRef, prop)
-operator fun <T: Any> NullableObjectOptionConfiguration<T>.provideDelegate(thisRef: CLI, prop: KProperty<*>) = provideDelegateImpl(this, thisRef, prop)
-operator fun <T: Any> ListOptionConfiguration<T>.provideDelegate(thisRef: CLI, prop: KProperty<*>) = provideDelegateImpl(this, thisRef, prop)
-operator fun BooleanOptionConfiguration.provideDelegate(thisRef: CLI, prop: KProperty<*>) = provideDelegateImpl(this, thisRef, prop)
+operator fun <T: Any> ValueOptionConfiguration<T>.provideDelegate(thisRef: CLI, prop: KProperty<*>)
+        = provideDelegateImpl(this, thisRef, prop)
+
+operator fun <T: Any> NullableValueOptionConfiguration<T>.provideDelegate(thisRef: CLI, prop: KProperty<*>)
+        = provideDelegateImpl(this, thisRef, prop)
+
+operator fun <T: Any> ObjectOptionConfiguration<T>.provideDelegate(thisRef: CLI, prop: KProperty<*>)
+        = provideDelegateImpl(this, thisRef, prop)
+
+operator fun <T: Any> NullableObjectOptionConfiguration<T>.provideDelegate(thisRef: CLI, prop: KProperty<*>)
+        = provideDelegateImpl(this, thisRef, prop)
+
+operator fun <T: Any> ListOptionConfiguration<T>.provideDelegate(thisRef: CLI, prop: KProperty<*>)
+        = provideDelegateImpl(this, thisRef, prop)
+
+operator fun BooleanOptionConfiguration.provideDelegate(thisRef: CLI, prop: KProperty<*>)
+        = provideDelegateImpl(this, thisRef, prop)
+
 
 //endregion
 
@@ -29,7 +41,7 @@ internal val AbstractCommandLineOption<*>.factoryOrErrors: FactorySearchResult<*
     else -> TODO()
 }
 
-internal object UNINITIALIZED
+internal object NO_DEFAULT_AVAILABLE
 
 internal fun AbstractCommandLineOption<*>.names() = listOf(shortName, longName)
 internal fun AbstractCommandLineOption<*>.toPropertyDescriptor(): String {

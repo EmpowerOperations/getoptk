@@ -63,6 +63,7 @@ interface ListOptionConfiguration<E: Any>: CommandLineOption<List<E>>{
     var longName: String
 
     var parseMode: ListSpreadMode<E>
+    var default: List<E>
 
 }
 
@@ -86,8 +87,8 @@ data class CSV<T>(val elementConverter: Converter<T>): ListSpreadMode<T>()
 inline fun <reified T: Any> varargs(noinline converter: Converter<T> = DefaultConverters[T::class] ?: InvalidConverter) = Varargs(converter)
 data class Varargs<T>(val elementConverter: Converter<T>) : ListSpreadMode<T>()
 
-//indicate that you want to use a custom regex to split the list
-fun regex(regex: Regex, captureGroupName: String = "item"): ListSpreadMode<Nothing> = TODO()
+//TODO regex support? a bridge too far? how can i delimit a regex, or assume that the users matcher will stop when it needs to?
+//does anybody actually want this feature?
 
 enum class FlagInterpretation { FLAG_IS_TRUE, FLAG_IS_FALSE }
 

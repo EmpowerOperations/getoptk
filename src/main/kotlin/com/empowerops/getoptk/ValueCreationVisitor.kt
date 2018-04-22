@@ -64,8 +64,8 @@ internal class ValueCreationVisitor(val allOptions: List<AbstractCommandLineOpti
                 val factory = config.factoryOrErrors!! as UnrolledAndUntypedFactory<*>
 
                 var instances: List<Any?> = emptyList()
-                for(i in 0 .. argumentTokens.size-1 step factory.argCount) {
-                    val args = argumentTokens.slice(i .. i + factory.argCount - 1)
+                for(i in 0 .. argumentTokens.size-1 step factory.arity) {
+                    val args = argumentTokens.slice(i .. i + factory.arity - 1)
                     instances += factory.tryMake(config, args)
                 }
 

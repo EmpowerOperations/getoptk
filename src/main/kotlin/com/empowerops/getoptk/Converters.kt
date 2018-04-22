@@ -2,6 +2,8 @@ package com.empowerops.getoptk
 
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
+import java.nio.file.Path
+import java.nio.file.Paths
 import kotlin.reflect.KClass
 import kotlin.reflect.full.companionObject
 import kotlin.reflect.full.companionObjectInstance
@@ -32,6 +34,8 @@ object DefaultConverters {
         type.companionObject?.hasLocalMethod("parse", returnType = type, paramTypes = listOf(String::class)) ?: false ->
             CompanionMethodCallConverter(type, "parse")
 
+        //uhhh, am I loading classes problematically here?
+        type == Path::class -> PathConverter
         type == String::class -> StringConverter
         type == Int::class -> IntConverter
         type == Long::class -> LongConverter
@@ -47,14 +51,17 @@ object DefaultConverters {
 object InvalidConverter: Converter<Nothing>{
     override fun invoke(text: String) = throw UnsupportedOperationException("not implemented")
 }
-object DoubleConverter: DelegatingConverter<Double>(String::toDouble), Primative
-object FloatConverter: DelegatingConverter<Float>(String::toFloat), Primative
-object IntConverter: DelegatingConverter<Int>(String::toInt), Primative
-object LongConverter: DelegatingConverter<Long>(String::toLong), Primative
+object DoubleConverter: DelegatingConverter<Double>(String::toDouble)
+object FloatConverter: DelegatingConverter<Float>(String::toFloat)
+object IntConverter: DelegatingConverter<Int>(String::toInt)
+object LongConverter: DelegatingConverter<Long>(String::toLong)
 object StringConverter: Converter<String>{ override fun invoke(text: String) = text }
+object PathConverter: DelegatingConverter<Path>({ Paths.get(it) })
 object CharConverter: Converter<Char>{
     override fun invoke(text: String): Char {
-        require(text.length == 1){ "char variables must be exactly 1 character" }
+        require(text.length == 1){
+            "char variables must be exactly 1 character, but '$text' was ${text.length} characters"
+        }
         return text[0]
     }
 }
@@ -86,7 +93,6 @@ class CompanionMethodCallConverter<T: Any>(val type: KClass<T>, methodName: Stri
     override fun invoke(text: String): T = type.java.cast(method.invoke(companionInstance, text))
 }
 
-interface Primative {}
 abstract class DelegatingConverter<out T>(val convertActual: (String) -> T): Converter<T> by convertActual
 
 fun KClass<*>.hasStaticMethod(name: String, returnType: KClass<*>, paramTypes: List<KClass<*>>)

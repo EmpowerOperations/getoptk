@@ -34,7 +34,7 @@ class UsageExamples {
         val helloStringResult = instance.helloString
         val oddString = instance.anotherString
 
-        //assertbu
+        //assert
         assertThat(helloStringResult).isEqualTo("Hello_getoptk!")
         assertThat(oddString).isEqualTo("weird")
     }
