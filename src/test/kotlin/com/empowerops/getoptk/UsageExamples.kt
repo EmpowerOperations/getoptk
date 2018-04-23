@@ -276,16 +276,6 @@ class UsageExamples {
         }
     }
 
-    @Test fun `when using noop for unrecognized options should still parse remaining options properly`(){
-        val args = arrayOf("-o", "asdf", "-g", "-h", "1234", "--nonexistant", "45")
-
-        //act
-        val instance = args.parsedAs("prog", ::ignoreUnrecognized) { TwoFieldImpl() }
-
-        //assert
-        assertThat(instance.anotherString)
-    }
-
     @Test fun `when using defaulted values should properly parse`(){
         //setup
         val args = emptyArray<String>()

@@ -33,7 +33,7 @@ class ConfigErrorReporter(){
 class ParseErrorReporter(val programNamePrefix: String, val tokens: List<Token>) {
 
     var parsingProblems: List<ParseProblem> = emptyList()
-        private set;
+        private set
 
     var requestedHelp: Boolean = false
 
@@ -65,17 +65,70 @@ class ParseErrorReporter(val programNamePrefix: String, val tokens: List<Token>)
     }
 }
 
-class ConfigurationException(val messages: List<ConfigurationProblem>)
-    : RuntimeException((listOf("CLI configuration errors:") + messages.map { it.message }).joinToString("\n"), messages.firstOrNull()?.stackTrace)
+class ConfigurationException private constructor(message: String, cause: Exception?) : RuntimeException(message, cause){
+    companion object {
+        operator fun invoke(failure: ConfigurationFailure): ConfigurationException {
 
-class ParseFailedException(val messages: List<String>, cause: Exception?)
-    : RuntimeException(messages.joinToString("\n\n"), cause)
+            val newlineSeparatedMessages = failure.configurationProblems.joinToString("\n  ") { it.message }
+            val message = """CLI configuration errors:
+                |  $newlineSeparatedMessages
+                """.trimMargin()
 
-class HelpException(message: String)
-    : RuntimeException(message)
+            val exceptions = failure.configurationProblems.map { it.stackTrace }
+            val cause = exceptions.firstOrNull()
+            val suppressed = exceptions.drop(1)
 
-class MissingOptionsException(missingOptions: List<CommandLineOption<*>>)
-    : RuntimeException("missing options: " + (missingOptions.map { (it as AbstractCommandLineOption<*>).longName }).joinToString("', '", "'", "'"))
+            return ConfigurationException(message, cause).apply {
+                suppressed.forEach { cause!!.addSuppressed(it) }
+            }
+        }
+    }
+}
+
+class ParseFailedException private constructor(message: String, cause: Exception?) : RuntimeException(message, cause){
+    companion object {
+        operator fun invoke(failure: ParseFailure): ParseFailedException {
+
+            val newlineSeparatedMessages = failure.parseProblems.joinToString("\n\n") { it.message }
+            val message = """Failure in command line:
+                |
+                |$newlineSeparatedMessages
+                |
+                |${failure.helpMessage}
+                """.trimMargin()
+
+            val exceptions = failure.parseProblems.map { it.stackTrace }
+            val cause = exceptions.firstOrNull()
+            val suppressed = exceptions.drop(1)
+
+            return ParseFailedException(message, cause).apply {
+                suppressed.forEach { cause!!.addSuppressed(it) }
+            }
+        }
+    }
+}
+
+class HelpException private constructor(message: String) : RuntimeException(message) {
+    companion object {
+        operator fun invoke(failure: HelpRequested) = HelpException(failure.helpMessage)
+    }
+}
+
+class MissingOptionsException private constructor(message: String): RuntimeException(message){
+    companion object {
+        operator fun invoke(failure: MissingOptions): MissingOptionsException {
+            val options = failure.missingOptions
+                    .map { it as AbstractCommandLineOption }
+                    .joinToString("', '", "'", "'") { it.longName }
+
+            val message = """Missing required options: $options
+                |${failure.helpMessage}
+                """.trimMargin()
+
+            return MissingOptionsException(message)
+        }
+    }
+}
 
 private class ConfigurationExceptionCause: RuntimeException("Configuration Exception")
 private class ParseExceptionCause: RuntimeException("Parse Exception")

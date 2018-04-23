@@ -14,8 +14,9 @@ class ConfigurationErrorHandlingFixture {
         }
 
         //assert
-        assertThat(ex.messages.single().message).isEqualTo(
-                "the options 'val excess: String by getValueOpt()' and 'val extra: String by getValueOpt()' have the same short name 'e'."
+        assertThat(ex.message).isEqualTo("""CLI configuration errors:
+            |  the options 'val excess: String by getValueOpt()' and 'val extra: String by getValueOpt()' have the same short name 'e'.
+            """.trimMargin()
         )
     }
     class DuplicateInferredNamesArgBundle : CLI(){
@@ -32,8 +33,8 @@ class ConfigurationErrorHandlingFixture {
         //assert
         assertThat(ex).isInstanceOf2<ConfigurationException>()
         assertThat(ex.message).isEqualTo("""CLI configuration errors:
-                |specification for 'first' threw java.lang.NumberFormatException: For input string: "twenty-three"
-                |specification for 'second' threw java.lang.NumberFormatException: For input string: "33.4"
+                |  specification for 'first' threw java.lang.NumberFormatException: For input string: "twenty-three"
+                |  specification for 'second' threw java.lang.NumberFormatException: For input string: "33.4"
                 """.trimMargin()
         )
     }

@@ -1,10 +1,8 @@
 package com.empowerops.getoptk
 
-import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.lang.UnsupportedOperationException
-import java.nio.file.Path
 
 class RuntimeErrorHandlingFixture {
 
@@ -22,13 +20,13 @@ class RuntimeErrorHandlingFixture {
         val args = emptyArray<String>()
 
         //act
-        val ex = assertThrows<MissingOptionsException> { args.parsedAs("program") { Thingy() } }
+        val ex = assertThrows<MissingOptionsException> { args.parsedAs("prog.exe") { Thingy() } }
 
         //assert
-        assertThat(ex.message).isEqualTo("""Missing options: 'required'
+        assertThat(ex.message!!.trimLineEnds()).isEqualTo("""Missing required options: 'required'
                 |usage: prog.exe
-                |  -r,--required <int>
-                |  -n,--notRequired <int>
+                | -r,--required <int>
+                | -n,--notRequired <int>
                 """.trimMargin()
         )
     }
@@ -56,11 +54,16 @@ class RuntimeErrorHandlingFixture {
         }
 
         //assert
-        assertThat(ex.message).isEqualTo(
-                """Failed to parse value for val eh: A by getOpt()
+        assertThat(ex.message!!.trimLineEnds()).isEqualTo(
+                """Failure in command line:
+                  |
+                  |Failed to parse value for val eh: A by getOpt()
                   |prog --eh hello_world 1.0
                   |at:                   ~~~
                   |java.lang.NumberFormatException: For input string: "1.0"
+                  |
+                  |usage: prog
+                  | -e,--eh <value>
                   """.trimMargin()
         )
         assertThat(ex.cause).isInstanceOf(NumberFormatException::class.java)
@@ -81,10 +84,15 @@ class RuntimeErrorHandlingFixture {
         val ex = assertThrows<ParseFailedException> { args.parsedAs("prog") { ValueOfAbleCLI() } }
 
         //assert
-        assertThat(ex.message).isEqualTo(
-                """unknown option 'name', expected 'parsable', 'help'
+        assertThat(ex.message!!.trimLineEnds()).isEqualTo(
+                """Failure in command line:
+                  |
+                  |unknown option 'name', expected 'parsable', 'help'
                   |prog --name bob
                   |at:    ~~~~
+                  |
+                  |usage: prog
+                  | -p,--parsable <value>
                   """.trimMargin()
         )
     }
@@ -105,11 +113,16 @@ class RuntimeErrorHandlingFixture {
         val ex = assertThrows<ParseFailedException> { args.parsedAs("prog") { BadConvertingCLI() }}
 
         //assert
-        assertThat(ex.message).isEqualTo(
-                """Failed to parse value for val problem: String by getValueOpt()
+        assertThat(ex.message!!.trimLineEnds()).isEqualTo(
+                """Failure in command line:
+                  |
+                  |Failed to parse value for val problem: String by getValueOpt()
                   |prog --problem sam
                   |at:            ~~~
                   |java.lang.UnsupportedOperationException: no sam's allowed!
+                  |
+                  |usage: prog
+                  | -p,--problem <value>
                   """.trimMargin()
         )
         assertThat(ex.cause).isInstanceOf(UnsupportedOperationException::class.java)
@@ -134,7 +147,7 @@ class RuntimeErrorHandlingFixture {
         //assert
         assertThat(ex)
                 .isInstanceOf2<MissingOptionsException>()
-                .hasMessage("missing options: 'req2', 'req3'")
+                .hasMessageContaining("Missing required options: 'req2', 'req3'")
     }
     class TwoRequiredFieldCLI: CLI(){
         val req1: String by getValueOpt()
@@ -155,7 +168,7 @@ class RuntimeErrorHandlingFixture {
         val ex = assertThrows<UninitializedPropertyAccessException> { result.optional1 }
 
         //assert
-        assertThat(ex.message).isEqualTo("getValueOpt property optional1 has not been initialized")
+        assertThat(ex.message).isEqualTo("val optional1: NonDefaulted by getOpt() has not been initialized")
     }
     class OneNonnullOptionalFieldCLI: CLI(){
         val optional1: NonDefaulted by getOpt() {

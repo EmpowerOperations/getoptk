@@ -22,3 +22,5 @@ inline fun <reified C> AbstractThrowableAssert<*, out Throwable>.isInstanceOf2()
 
 @Suppress("UNCHECKED_CAST") //'Self' type that kotlin's type system cant tolerate.
 inline fun <reified C> AbstractObjectAssert<*, *>.isInstanceOf(): AbstractObjectAssert<*, *> = this.isInstanceOf(C::class.java)
+
+fun String.trimLineEnds(): String = lineSequence().map { it.trimEnd() }.joinToString("\n")

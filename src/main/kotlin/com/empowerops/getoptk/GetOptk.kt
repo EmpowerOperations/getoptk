@@ -84,36 +84,20 @@ abstract class CLI {
             val visitor = ValueCreationVisitor(opts, parseErrorReporter).apply { root.accept(this) }
 
             if(parseErrorReporter.requestedHelp){
-                val helpMessage = makeHelpMessage(programName, cmd.optionProperties)
-                altHandler(HelpRequested(helpMessage))
+                altHandler(HelpRequested(cmd.makeHelpMessage(programName)))
             }
             if(parseErrorReporter.parsingProblems.any()){
-                altHandler(ParseFailure(parseErrorReporter.parsingProblems))
+                altHandler(ParseFailure(parseErrorReporter.parsingProblems, cmd.makeHelpMessage(programName)))
             }
 
             val requiredButNotSpecifiedOptions: List<AbstractCommandLineOption<*>> = visitor.unconsumedOptions.filter { it.isRequired }
             if(requiredButNotSpecifiedOptions.any()){
-                altHandler(MissingOptions(requiredButNotSpecifiedOptions))
+                altHandler(MissingOptions(requiredButNotSpecifiedOptions, cmd.makeHelpMessage(programName)))
             }
 
+            // uhh, if `altHandler` is a no-op, and we encounter all of the above errors,
+            // are we sure this object is even consistent?
             return cmd
-        }
-
-        private fun makeHelpMessage(programName: String, opts: List<AbstractCommandLineOption<*>>): String{
-            val stg = STGroupFile("com/empowerops/getoptk/HelpMessage.stg", "UTF-8").apply {
-                registerModelAdaptor(String::class.java, StringExtensionFunctionsAdapter)
-                registerModelAdaptor(AbstractCommandLineOption::class.java, OptionExtensionFunctionsAdapter)
-            }
-
-
-            val st = stg.getInstanceOf("helpMessage").apply {
-                add("programName", programName)
-                add("options", opts)
-            }
-
-            val result = st.render(80)
-
-            return result
         }
 
         object OptionExtensionFunctionsAdapter: ObjectModelAdaptor(){
@@ -221,30 +205,30 @@ fun <T: Any> getNullableOpt(cli: CLI, spec: NullableObjectOptionConfiguration<T>
 
 sealed class SpecialCaseInterpretation
 data class ConfigurationFailure(val configurationProblems: List<ConfigurationProblem>) : SpecialCaseInterpretation()
-data class ParseFailure(val parseProblems: List<ParseProblem>) : SpecialCaseInterpretation()
+data class ParseFailure(val parseProblems: List<ParseProblem>, val helpMessage: String) : SpecialCaseInterpretation()
 data class HelpRequested(val helpMessage: String) : SpecialCaseInterpretation()
-data class MissingOptions(val missingOptions: List<CommandLineOption<*>>): SpecialCaseInterpretation()
+data class MissingOptions(val missingOptions: List<CommandLineOption<*>>, val helpMessage: String): SpecialCaseInterpretation()
 
 fun throwSpecialCase(specialCase: SpecialCaseInterpretation): Nothing = when(specialCase){
-    is ConfigurationFailure -> throw ConfigurationException(specialCase.configurationProblems)
-    is ParseFailure -> throw ParseFailedException(
-            specialCase.parseProblems.map { it.message },
-            specialCase.parseProblems.firstOrNull { it.stackTrace != null}?.stackTrace
-    )
-    is HelpRequested -> throw HelpException(specialCase.helpMessage)
-    is MissingOptions -> throw MissingOptionsException(specialCase.missingOptions)
+    is ConfigurationFailure -> throw ConfigurationException(specialCase)
+    is ParseFailure -> throw ParseFailedException(specialCase)
+    is HelpRequested -> throw HelpException(specialCase)
+    is MissingOptions -> throw MissingOptionsException(specialCase)
 }
 
-fun ignoreUnrecognized(specialCase: SpecialCaseInterpretation): Unit = when(specialCase){
-    is ConfigurationFailure -> throw ConfigurationException(specialCase.configurationProblems)
-    is ParseFailure -> {
-        val recognizedParseFailures = specialCase.parseProblems.filter { "unknown option " !in it.message }
-        if(recognizedParseFailures.any()) throw ParseFailedException(
-                recognizedParseFailures.map { it.message },
-                recognizedParseFailures.firstOrNull { it.stackTrace != null }?.stackTrace
-        )
-        else Unit
+
+private fun CLI.makeHelpMessage(programName: String): String {
+    val stg = STGroupFile("com/empowerops/getoptk/HelpMessage.stg", "UTF-8").apply {
+        registerModelAdaptor(String::class.java, CLI.Companion.StringExtensionFunctionsAdapter)
+        registerModelAdaptor(AbstractCommandLineOption::class.java, CLI.Companion.OptionExtensionFunctionsAdapter)
     }
-    is HelpRequested -> throw HelpException(specialCase.helpMessage)
-    is MissingOptions -> throw MissingOptionsException(specialCase.missingOptions)
+
+    val st = stg.getInstanceOf("helpMessage").apply {
+        add("programName", programName)
+        add("options", optionProperties)
+    }
+
+    val result = st.render(80)
+
+    return result
 }

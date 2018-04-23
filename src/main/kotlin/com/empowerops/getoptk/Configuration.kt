@@ -55,7 +55,6 @@ interface NullableValueOptionConfiguration<T: Any>: CommandLineOption<T?> {
     var default: T?
 }
 
-
 interface ListOptionConfiguration<E: Any>: CommandLineOption<List<E>>{
 
     var description: String
@@ -66,6 +65,20 @@ interface ListOptionConfiguration<E: Any>: CommandLineOption<List<E>>{
     var default: List<E>
 
 }
+
+interface BooleanOptionConfiguration: ReadOnlyProperty<CLI, Boolean> {
+
+    var interpretation: FlagInterpretation
+
+    var description: String
+
+    var longName: String
+    var shortName: String
+
+    var isHelp: Boolean
+    var isRequired: Boolean
+}
+
 
 sealed class ListSpreadMode<out T>
 
@@ -91,16 +104,3 @@ data class Varargs<T>(val elementConverter: Converter<T>) : ListSpreadMode<T>()
 //does anybody actually want this feature?
 
 enum class FlagInterpretation { FLAG_IS_TRUE, FLAG_IS_FALSE }
-
-interface BooleanOptionConfiguration: ReadOnlyProperty<CLI, Boolean> {
-
-    var interpretation: FlagInterpretation
-
-    var description: String
-
-    var longName: String
-    var shortName: String
-
-    var isHelp: Boolean
-    var isRequired: Boolean
-}

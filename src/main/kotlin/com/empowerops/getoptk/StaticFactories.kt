@@ -143,7 +143,7 @@ private fun <T: Any> makeFactoryFor(
     var errors = FactoryErrorList(emptyMap(), desiredType)
 
     val constructors = desiredType.constructors
-            .filter { it.visibility ?: KVisibility.PRIVATE < KVisibility.PUBLIC }
+            .filter { it.visibility == KVisibility.PUBLIC }
             .filter { it !in ctorStack }
 
     if(constructors.isEmpty()){

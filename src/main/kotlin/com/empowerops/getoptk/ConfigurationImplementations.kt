@@ -51,7 +51,7 @@ internal sealed class AbstractCommandLineOption<out T>: CommandLineOption<T> {
                     _value = Value(provided)
                     provided
                 }
-                NoValue -> throw IllegalStateException("no value for ${this.toPropertyDescriptor()}")
+                NoValue -> throw UninitializedPropertyAccessException("${this.toPropertyDescriptor()} has not been initialized")
             }
 
             if(this !is ListOptionConfigurationImpl<*>) require(optionType.isInstance(result) || result == null)
@@ -178,7 +178,7 @@ internal data class ObjectOptionConfigurationImpl<T: Any>(
         }
         set(value) {
             _default = value
-        }    
+        }
 
     override fun <N : Any> registerConverter(type: KClass<N>, converter: Converter<N>) {
         converters += type to converter
@@ -195,14 +195,14 @@ internal data class ObjectOptionConfigurationImpl<T: Any>(
             Value(default)
         }
         else {
-            val provider = makeProviderOf(optionType, converters)
-
-            if(provider is UnrolledAndUntypedFactory<*> && provider.arity == 0) {
-                Provider { optionType.cast(provider.make(emptyList())) }
-            }
-            else {
+//            val provider = makeProviderOf(optionType, converters)
+//
+//            if(provider is UnrolledAndUntypedFactory<*> && provider.arity == 0) {
+//                Provider { optionType.cast(provider.make(emptyList())) }
+//            }
+//            else {
                 NoValue
-            }
+//            }
         }
     }
 }

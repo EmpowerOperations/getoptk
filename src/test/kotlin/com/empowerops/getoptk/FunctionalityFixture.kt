@@ -17,4 +17,7 @@ class FunctionalityFixture {
     }
 
 
+    @Test fun `when using custom error handler should get called appropriately`(){
+        TODO()
+    }
 }
