@@ -218,6 +218,8 @@ fun throwSpecialCase(specialCase: SpecialCaseInterpretation): Nothing = when(spe
 
 
 private fun CLI.makeHelpMessage(programName: String): String {
+    //TODO: get this off STG such that we dont have the dep anymore
+    // fruther its not really the right tool anyways.
     val stg = STGroupFile("com/empowerops/getoptk/HelpMessage.stg", "UTF-8").apply {
         registerModelAdaptor(String::class.java, CLI.Companion.StringExtensionFunctionsAdapter)
         registerModelAdaptor(AbstractCommandLineOption::class.java, CLI.Companion.OptionExtensionFunctionsAdapter)
