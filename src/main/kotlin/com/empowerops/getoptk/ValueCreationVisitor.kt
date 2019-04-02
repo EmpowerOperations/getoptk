@@ -1,12 +1,22 @@
 package com.empowerops.getoptk
 
+import kotlin.reflect.full.cast
+
 internal class ValueCreationVisitor(val allOptions: List<AbstractCommandLineOption<*>>, val errorReporter: ParseErrorReporter) {
 
     var unconsumedOptions: List<AbstractCommandLineOption<*>> = allOptions
         private set
 
-    fun visitEnter(cliNode: CLIRootNode) {}
-    fun visitLeave(cliNode: CLIRootNode) {}
+    fun visitEnter(cliNode: CLINode) {}
+    fun visitLeave(cliNode: CLINode) {
+        val config = cliNode.config ?: return
+
+        unconsumedOptions -= config
+
+        val instance: Any? = config.optionType.cast(config.resolvedCommand)
+        config._value = Value(instance) as ValueStrategy<Nothing>
+
+    }
 
     fun visitEnter(optionNode: BooleanOptionNode) {}
     fun visitLeave(optionNode: BooleanOptionNode) {

@@ -9,7 +9,7 @@ import org.apache.maven.model.License as PomLicense
 import org.apache.maven.model.Model as PomModel
 import org.apache.maven.model.Scm as PomScm
 
-val kotlin_version = "1.1.1"
+val kotlin_version = "1.3.20"
 
 val p = project {
     name = "getoptk"
@@ -24,13 +24,13 @@ val p = project {
                 "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version",
                 "com.google.guava:guava:19.0"
         )
-        compile("org.jetbrains.kotlin:kotlin-stdlib:1.1.1")
+        compile("org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version")
         compile("org.antlr:ST4:4.0.8")
     }
 
     dependenciesTest {
         compile("junit:junit:4.11", "org.assertj:assertj-core:3.5.2")
-        compile("org.jetbrains.kotlin:kotlin-test:1.1.1")
+        compile("org.jetbrains.kotlin:kotlin-test:$kotlin_version")
     }
 
     assemble {

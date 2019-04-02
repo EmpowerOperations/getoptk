@@ -27,6 +27,9 @@ operator fun <T: Any> ListOptionConfiguration<T>.provideDelegate(thisRef: CLI, p
 operator fun BooleanOptionConfiguration.provideDelegate(thisRef: CLI, prop: KProperty<*>)
         = provideDelegateImpl(this, thisRef, prop)
 
+operator fun <T: CLI> SubcommandOptionConfiguration<T>.provideDelegate(thisRef: CLI, prop: KProperty<*>)
+        = provideDelegateImpl(this, thisRef, prop)
+
 
 //endregion
 
@@ -57,6 +60,7 @@ internal fun AbstractCommandLineOption<*>.toPropertyDescriptor(): String {
         is ListOptionConfigurationImpl<*> -> "getListOpt"
         is ObjectOptionConfigurationImpl<*> -> "getOpt"
         is NullableObjectOptionConfigurationImpl<*> -> "getNullableOpt"
+        is SubcommandOptionConfigurationImpl<*> -> "getCommandOpt"
     }
 
     return "$valOrVarPrefix $name: $type by $getOptFlavour()"

@@ -2,7 +2,7 @@ package com.empowerops.getoptk
 
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
-import kotlin.reflect.full.cast
+import kotlin.reflect.full.createInstance
 
 /**
  * Created by Geoff on 2017-04-29.
@@ -158,6 +158,50 @@ internal data class ListOptionConfigurationImpl<E: Any>(
             is Varargs<E> -> converter = parseMode.elementConverter
             is CSV<E> -> converter = parseMode.elementConverter
         }
+    }
+}
+
+internal data class SubcommandOptionConfigurationImpl<C: CLI>(
+        override val optionType: KClass<C>,
+        val userConfig: SubcommandOptionConfiguration<C>.() -> Unit,
+        override var isRequired: Boolean = true
+) : AbstractCommandLineOption<C>(), SubcommandOptionConfiguration<C>{
+
+    private val subCommands = findSubCommands()
+    internal lateinit var resolvedCommand: Subcommand
+
+    private fun findSubCommands() = optionType.sealedSubclasses.map { it.createInstance() }.map { it as Subcommand }
+
+    internal fun hasSubcommandNamed(name: String): Boolean {
+        return name in subCommands.map { it.name }
+    }
+
+    private var _default: Any = DefaultValues[optionType] ?: NO_DEFAULT_AVAILABLE
+    override var default: C
+        get(){
+            if (_default != NO_DEFAULT_AVAILABLE) @Suppress("UNCHECKED_CAST") return _default as C
+            else throw IllegalStateException("'default' is write-only as it currently has no value")
+        }
+        set(value) {
+            _default = value
+        }
+
+
+    fun resolveOpts(text: String, errorReporter: ParseErrorReporter): List<AbstractCommandLineOption<*>> {
+        resolvedCommand = subCommands.single { it.name == text }
+
+        return resolvedCommand.optionProperties
+    }
+
+    override fun <T: Any> registerCommand(subcommandName: String, type: KClass<T>) {
+        TODO()
+    }
+
+    override fun applyAdditionalConfiguration(thisRef: CLI, prop: KProperty<*>?) {
+
+        invokeAndReportErrorsTo(thisRef.errorReporter, this) { userConfig() }
+
+//        if(_value == NoValue) _value = Value(default)
     }
 }
 

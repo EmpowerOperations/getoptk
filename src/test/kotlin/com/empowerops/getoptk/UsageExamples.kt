@@ -1,7 +1,6 @@
 package com.empowerops.getoptk
 
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.Before
 import org.junit.Test
 
 /**
@@ -317,6 +316,87 @@ class UsageExamples {
         val nonnullable: SimpleDTO by getOpt{
             isRequired = false
         }
+    }
+
+    @Test fun `when using git like component with sub commands should properly parse`(){
+        val args = arrayOf("lfs", "--initialize")
+
+        val command: GitCLI = args.parsedAs("git") { GitCLI() }
+
+        assertThat(command.subCommand).isInstanceOf(GitSubCommand.Lfs::class.java)
+        assertThat((command.subCommand as GitSubCommand.Lfs).initialize).isTrue()
+    }
+    class GitCLI: CLI() {
+        val subCommand: GitSubCommand by getSubcommandOpt()
+    }
+
+    sealed class GitSubCommand: Subcommand(){
+
+        class Lfs: GitSubCommand() {
+            val initialize: Boolean by getFlagOpt()
+        }
+        class Checkout: GitSubCommand() {
+//            val message: String by getOpt()
+        }
+    }
+
+    @Test fun `when using git like component with bad commands should properly parse`(){
+        val args = arrayOf("lfs", "--hogwarts", "9.75")
+
+        //act
+        val ex = assertThrows<ParseFailedException> { args.parsedAs("git") { GitCLI() } }
+
+        //assert
+        assertThat(ex.message).isEqualTo("""
+            com.empowerops.getoptk.ParseFailedException: Failure in command line:
+
+            unknown option 'hogwarts', expected 'initialize'
+            git lfs --hogwarts 9.75
+            at:       ~~~~~~~~
+
+            usage: git lfs
+             -i,--initialize
+        """.trimIndent())
+    }
+
+    @Test fun `when using better git like component with sub commands should properly parse`(){
+        val args = arrayOf("lfs", "--initialize")
+
+        val command: BetterGitCLI = args.parsedAs("git") { BetterGitCLI() }
+
+        assertThat(command.subCommand).isInstanceOf(GitSubCommand.Lfs::class.java)
+        assertThat((command.subCommand as GitSubCommand.Lfs).initialize).isTrue()
+    }
+
+    class BetterGitCLI: CLI() {
+        val subCommand: BetterGitSubCommand by getSubcommandOpt {
+            registerCommand<BetterGitSubCommand.Lfs>("lfs")
+            registerCommand<BetterGitSubCommand.Checkout>("checkout")
+        }
+    }
+
+    sealed class BetterGitSubCommand: Subcommand(){
+        data class Lfs(val initialize: Boolean): BetterGitSubCommand()
+        data class Checkout(val branchName: String): BetterGitSubCommand()
+    }
+
+    @Test fun `when using better git like component with bad commands should properly parse`(){
+        val args = arrayOf("lfs", "--hogwarts", "9.75")
+
+        //act
+        val ex = assertThrows<ParseFailedException> { args.parsedAs("git") { BetterGitCLI() } }
+
+        //assert
+        assertThat(ex.message).isEqualTo("""
+            com.empowerops.getoptk.ParseFailedException: Failure in command line:
+
+            unknown option 'hogwarts', expected 'initialize'
+            git lfs --hogwarts 9.75
+            at:       ~~~~~~~~
+
+            usage: git lfs
+             -i,--initialize
+        """.trimIndent())
     }
 }
 

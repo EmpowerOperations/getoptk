@@ -7,7 +7,6 @@ import java.nio.file.Paths
 import kotlin.reflect.KClass
 import kotlin.reflect.full.companionObject
 import kotlin.reflect.full.companionObjectInstance
-import java.lang.Enum as JavaEnum
 
 //looks up strategies to convert strings to T's, eg "Double.parseDouble", "Boolean.parseBoolean", etc.
 // please note this object returns a closed converter, which might be weird
@@ -42,7 +41,7 @@ object DefaultConverters {
         type == Float::class -> FloatConverter
         type == Double::class -> DoubleConverter
         type == Char::class -> CharConverter
-        type.java.isEnum -> EnumConverter(type.java as Class<Nothing>)
+        type.java.isEnum -> EnumConverter(type as KClass<Nothing>)
         //Nothing is a bottom type, only way I could think to satisfy the Enum<Enum<Enum...>>> problem
         else -> null
     } as Converter<T>?
@@ -65,10 +64,13 @@ object CharConverter: Converter<Char>{
         return text[0]
     }
 }
-class EnumConverter<T: Enum<T>>(val enumType: Class<T>): Converter<T>{
+class EnumConverter<T: Enum<T>>(val enumType: KClass<T>): Converter<T>{
     override fun invoke(text: String): T {
-        val generatedEnum = JavaEnum.valueOf(enumType, text)
-        return enumType.cast(generatedEnum)
+
+        TODO()
+
+//        val generatedEnum = enumType.enumValueOf(text)
+//        return enumType.cast(generatedEnum)
     }
 }
 

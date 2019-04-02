@@ -6,7 +6,11 @@ package com.empowerops.getoptk
 
 internal sealed class ParseNode(open val children: List<ParseNode> = emptyList())
 
-internal data class CLIRootNode(override val children: List<ParseNode>): ParseNode()
+internal data class CLINode(
+        val commandName: String,
+        override val children: List<ParseNode>,
+        val config: SubcommandOptionConfigurationImpl<*>? = null
+): ParseNode()
 
 internal data class BooleanOptionNode(
         val preamble: Token,
@@ -48,7 +52,7 @@ internal data class ArgumentNode(
 internal object ErrorNode: ParseNode()
 
 internal fun ParseNode.accept(visitor: ValueCreationVisitor): Unit = when(this){
-    is CLIRootNode ->       this.internalAccept(visitor, { visitEnter(it) }, { visitLeave(it) })
+    is CLINode ->       this.internalAccept(visitor, { visitEnter(it) }, { visitLeave(it) })
     is ValueOptionNode ->   this.internalAccept(visitor, { visitEnter(it) }, { visitLeave(it) })
     is ObjectOptionNode ->  this.internalAccept(visitor, { visitEnter(it) }, { visitLeave(it) })
     is ListOptionNode ->    this.internalAccept(visitor, { visitEnter(it) }, { visitLeave(it) })

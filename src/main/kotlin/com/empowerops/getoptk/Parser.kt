@@ -1,6 +1,7 @@
 package com.empowerops.getoptk
 
-import kotlin.coroutines.experimental.buildSequence
+import java.util.*
+import kotlin.sequences.*
 
 
 /**
@@ -15,7 +16,7 @@ import kotlin.coroutines.experimental.buildSequence
  * symbol               -> production
  * -------------------- -> ----------
  * _start_              -> [parseCLI]
- * [parseCLI]           -> ( ([parseWindowsOption] OR [parseShortOption] OR [parseLongOption]) [SuperTokenSeparator])*
+ * [parseCLI]           -> ( ([parseWindowsOption] OR [parseShortOption] OR [parseLongOption]) [SuperTokenSeparator])* OR ([parseSubcommandName] [parseCLI])
  * [parseWindowsOption] -> [WindowsPreamble] ([ShortOptionName] OR [LongOptionName]) [parseOptionsBackHalf]*
  * [parseShortOption]   -> [ShortPreamble] [ShortOptionName] [parseOptionsBackHalf]*
  * [parseLongOption]    -> [LongPreamble] [LongOptionName] [parseOptionsBackHalf]
@@ -26,33 +27,62 @@ import kotlin.coroutines.experimental.buildSequence
  */
 internal class Parser(
         override val errorReporter: ParseErrorReporter,
-        val componentCombinators: List<AbstractCommandLineOption<*>>
+        rootComponentCombinators: List<AbstractCommandLineOption<*>>
 ): ErrorReporting {
+
+    val stack: Deque<List<AbstractCommandLineOption<*>>> = LinkedList(listOf(rootComponentCombinators))
+    val componentCombinators: List<AbstractCommandLineOption<*>> get() = stack.peek()
 
     companion object {
         val Preambles = """'-' or '--' or '/'"""
     }
 
     /** as per [Parser]:
-     * [parseCLI] -> ( ([parseWindowsOption] OR [parseShortOption] OR [parseLongOption]) [SuperTokenSeparator])*
+     * [parseCLI] -> ( ([parseWindowsOption] OR [parseShortOption] OR [parseLongOption]) [SuperTokenSeparator])* OR (_subcommand-name_ [parseCLI])
      **/
-    fun parseCLI(tokens: List<Token>): CLIRootNode = analyzing(tokens) {
+    fun parseCLI(tokens: List<Token>, commandName: String, config: SubcommandOptionConfigurationImpl<*>? = null): CLINode = analyzing(tokens) {
 
         var children = emptyList<ParseNode>()
 
         while(hasNext()){
-            val newChild = when(peek()){
+            val newChild = when(val next = peek()){
                 is WindowsPreamble -> parseWindowsOption(rest())
                 is ShortPreamble -> parseShortOption(rest())
                 is LongPreamble -> parseLongOption(rest())
+                is Argument -> {
+
+                    val subCommands = componentCombinators.filterIsInstance<SubcommandOptionConfigurationImpl<*>>()
+
+                    val subCommand = subCommands.firstOrNull { it.hasSubcommandNamed(next.text) }
+
+                    val x: CLINode = if(subCommand != null) {
+
+                        expect<Argument>()
+                        expect<SuperTokenSeparator>()
+
+                        val opts = subCommand.resolveOpts(next.text, errorReporter)
+
+                        stack.push(opts)
+                        try {
+                            parseCLI(rest(), next.text, subCommand)
+                        }
+                        finally { stack.pop() }
+                    }
+                    else {
+                        TODO() //positional arguments?
+                    }
+
+                    x
+                }
                 else -> logAndRecover("expected $Preambles")
             }
 
             children += newChild
-            expect<SuperTokenSeparator>()
+
+            if(newChild !is CLINode) expect<SuperTokenSeparator>()
         }
 
-        return@analyzing CLIRootNode(children)
+        return@analyzing CLINode(commandName, children, config)
     }
 
     /** as per [Parser]:
@@ -158,6 +188,7 @@ internal class Parser(
                     val argumentNode = ArgumentNode(separator, config, arg)
                     ArgumentListNode(listOf(argumentNode))
                 }
+                is SubcommandOptionConfigurationImpl<*> -> TODO()
             }
         }
         return@analyzing Pair(config, argumentList)
@@ -175,6 +206,8 @@ internal class Parser(
         is ListOptionConfigurationImpl<*>           -> ListOptionNode   (preamble, optName, config, argumentList)
         is ObjectOptionConfigurationImpl<*>         -> ObjectOptionNode (preamble, optName, config, argumentList)
         is NullableObjectOptionConfigurationImpl<*> -> ObjectOptionNode (preamble, optName, config, argumentList)
+
+        is SubcommandOptionConfigurationImpl -> TODO("parsing CLI node as option?")
         null -> ErrorNode.apply { errorReporter.internalError(optName, "expected $config to be a known type") }
     }
 
@@ -241,8 +274,8 @@ internal class Parser(
         return@analyzing ArgumentListNode(argList)
     }
 
-    fun parseVarargsList(spec: AbstractCommandLineOption<*>, tokens: List<Token>): ArgumentListNode =  analyzing(tokens) {
-        val nodes = buildSequence {
+    fun parseVarargsList(spec: AbstractCommandLineOption<*>, tokens: List<Token>): ArgumentListNode = analyzing(tokens) {
+        val nodes = sequence {
             while (peek() is SuperTokenSeparator && peek(1) is Argument) {
                 val separator = expect<SuperTokenSeparator>()
                 val arg = expect<Argument>()

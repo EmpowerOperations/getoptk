@@ -3,7 +3,7 @@ package com.empowerops.getoptk
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import kotlin.reflect.KVisibility
-
+import kotlin.reflect.full.isSubclassOf
 
 
 sealed class FactorySearchResult<out T>
@@ -140,6 +140,12 @@ private fun <T: Any> makeFactoryFor(
         return FactoryErrorList(mapOf(listOf(desiredType) to "Constructor dependency graph is too deep."), desiredType)
     }
 
+    //recursive case 1: its a sub command
+    if(desiredType.isSubclassOf(CLI::class)){
+        return NullFactory
+    }
+
+    //recursive case 2 (tail case): recurse on this objects constructor
     var errors = FactoryErrorList(emptyMap(), desiredType)
 
     val constructors = desiredType.constructors

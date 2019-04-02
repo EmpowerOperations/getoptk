@@ -50,6 +50,9 @@ private fun ConfigErrorReporter.checkConverter(newOption: AbstractCommandLineOpt
         is BooleanOptionConfigurationImpl -> {
             //no conversion on booleans needed
         }
+        is SubcommandOptionConfigurationImpl -> {
+            //TODO
+        }
     }
 }
 

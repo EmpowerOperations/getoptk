@@ -2,6 +2,7 @@ package com.empowerops.getoptk
 
 import org.stringtemplate.v4.Interpreter
 import org.stringtemplate.v4.ST
+import org.stringtemplate.v4.STGroup
 import org.stringtemplate.v4.STGroupFile
 import org.stringtemplate.v4.misc.ObjectModelAdaptor
 import kotlin.reflect.KClass
@@ -15,9 +16,10 @@ import kotlin.reflect.KClass
 // than use some kind of reflective set call or factory or anything else.
 abstract class CLI {
 
+    internal var errorReporter = ConfigErrorReporter()
+
     //TODO: this should use reference equality on the CLI object.
     internal var optionProperties: List<AbstractCommandLineOption<*>> = emptyList()
-    internal val errorReporter = ConfigErrorReporter()
 
     override fun equals(other: Any?): Boolean {
         if (other !is CLI) return false
@@ -79,7 +81,7 @@ abstract class CLI {
 
             val parser = Parser(parseErrorReporter, opts)
 
-            val root = parser.parseCLI(tokens)
+            val root = parser.parseCLI(tokens, programName)
 
             val visitor = ValueCreationVisitor(opts, parseErrorReporter).apply { root.accept(this) }
 
@@ -139,6 +141,10 @@ abstract class CLI {
     }
 }
 
+abstract class Subcommand: CLI() {
+    open val name: String = this::class.simpleName!!.toLowerCase()
+}
+
 /**
  * Parses the reciever string array (typically `args`) into the CLI instance
  * provided by calling the host factory
@@ -173,6 +179,10 @@ inline fun <reified E: Any> CLI.getListOpt(noinline spec: ListOptionConfiguratio
         = getListOpt(this, spec, E::class)
 //cant think of a use case for a NullableList since emptyList serves as an effective monadic-unit.
 
+
+inline fun <reified C: CLI> CLI.getSubcommandOpt(noinline spec: SubcommandOptionConfiguration<C>.() -> Unit = {})
+        = getSubcommandOpt(this, spec, C::class)
+
 /**
  * Defines an object option type from the command line.
  */
@@ -182,9 +192,9 @@ inline fun <reified T: Any> CLI.getOpt(noinline spec: ObjectOptionConfiguration<
 inline fun <reified T: Any> CLI.getNullableOpt(noinline spec: NullableObjectOptionConfiguration<T>.() -> Unit = {})
         = getNullableOpt(this, spec, T::class)
 
-/**
- * Defines a boolean (flag) option type from the command line.
- */
+fun <T: Any> getOpt(cli: CLI, spec: ObjectOptionConfiguration<T>.() -> Unit, objectType: KClass<T>): ObjectOptionConfiguration<T>
+        = ObjectOptionConfigurationImpl(objectType, spec)
+
 fun CLI.getFlagOpt(spec: BooleanOptionConfiguration.() -> Unit = {}): BooleanOptionConfiguration
         = BooleanOptionConfigurationImpl(spec)
 
@@ -197,11 +207,11 @@ fun <T: Any> getNullableValueOpt(cli: CLI, spec: NullableValueOptionConfiguratio
 fun <T: Any> getListOpt(cli: CLI, spec: ListOptionConfiguration<T>.() -> Unit, elementType: KClass<T>): ListOptionConfiguration<T>
         = ListOptionConfigurationImpl(elementType, spec)
 
-fun <T: Any> getOpt(cli: CLI, spec: ObjectOptionConfiguration<T>.() -> Unit, objectType: KClass<T>): ObjectOptionConfiguration<T>
-        = ObjectOptionConfigurationImpl(objectType, spec)
-
 fun <T: Any> getNullableOpt(cli: CLI, spec: NullableObjectOptionConfiguration<T>.() -> Unit, objectType: KClass<T>): NullableObjectOptionConfiguration<T>
         = NullableObjectOptionConfigurationImpl(objectType, spec)
+
+fun <T: CLI> getSubcommandOpt(cli: CLI, spec: SubcommandOptionConfiguration<T>.() -> Unit, objectType: KClass<T>): SubcommandOptionConfiguration<T>
+        = SubcommandOptionConfigurationImpl(objectType, spec)
 
 sealed class SpecialCaseInterpretation
 data class ConfigurationFailure(val configurationProblems: List<ConfigurationProblem>) : SpecialCaseInterpretation()
@@ -216,10 +226,13 @@ fun throwSpecialCase(specialCase: SpecialCaseInterpretation): Nothing = when(spe
     is MissingOptions -> throw MissingOptionsException(specialCase)
 }
 
+private val stg = STGroup().apply {
 
+}
 private fun CLI.makeHelpMessage(programName: String): String {
     //TODO: get this off STG such that we dont have the dep anymore
     // fruther its not really the right tool anyways.
+
     val stg = STGroupFile("com/empowerops/getoptk/HelpMessage.stg", "UTF-8").apply {
         registerModelAdaptor(String::class.java, CLI.Companion.StringExtensionFunctionsAdapter)
         registerModelAdaptor(AbstractCommandLineOption::class.java, CLI.Companion.OptionExtensionFunctionsAdapter)

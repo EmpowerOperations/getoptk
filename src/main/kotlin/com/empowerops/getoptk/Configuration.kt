@@ -66,6 +66,19 @@ interface ListOptionConfiguration<E: Any>: CommandLineOption<List<E>>{
 
 }
 
+interface SubcommandOptionConfiguration<out C: CLI>: CommandLineOption<C>{
+
+    var description: String
+    var shortName: String
+    var longName: String
+
+    var default: @UnsafeVariance C //TODO this isnt useful unless we can make CLI instances
+
+    fun <T: Any> registerCommand(commandName: String, commandType: KClass<T>)
+}
+inline fun <reified T: Any> SubcommandOptionConfiguration<CLI>.registerCommand(subcommandName: String) =
+        registerCommand(subcommandName, T::class)
+
 interface BooleanOptionConfiguration: ReadOnlyProperty<CLI, Boolean> {
 
     var interpretation: FlagInterpretation
