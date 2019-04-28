@@ -6,6 +6,48 @@ package com.empowerops.getoptk
 
 internal sealed class ParseNode(open val children: List<ParseNode> = emptyList())
 
+internal fun ParseNode.toStringTree(): String {
+
+    fun toLocalString(builder: StringBuilder, node: ParseNode): StringBuilder = builder.apply {
+
+        append(node::class.simpleName).append("(")
+
+        @Suppress("IMPLICIT_CAST_TO_ANY") when(node){
+            is CLINode -> append("command=${node.commandName}")
+            is BooleanOptionNode -> append("name=${node.optionName.text}")
+            is ListOptionNode -> append("name=${node.optionName.text}")
+            is ObjectOptionNode -> append("name=${node.optionName.text}")
+            is ValueOptionNode -> append("name=${node.optionName.text}")
+            is ArgumentListNode -> append("size=${node.children.size}")
+            is ArgumentNode -> append("value=${node.valueToken.text}")
+            is ErrorNode -> Unit
+        } as Any
+
+        builder.appendln(")")
+    }
+    fun recurse(builder: StringBuilder, node: ParseNode, indent: Int){
+        val prefix = "  ".repeat(indent)
+        builder.append(prefix)
+        toLocalString(builder, node)
+
+        if(node.children.any()) {
+            builder.appendln("$prefix(")
+
+            for (child in node.children) {
+                recurse(builder, child, indent + 1)
+            }
+
+            builder.appendln("$prefix)")
+        }
+    }
+
+    val builder = StringBuilder()
+
+    recurse(builder, this, 0)
+
+    return builder.toString()
+}
+
 internal data class CLINode(
         val commandName: String,
         override val children: List<ParseNode>,

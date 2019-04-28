@@ -333,7 +333,9 @@ class UsageExamples {
     sealed class GitSubCommand: Subcommand(){
 
         class Lfs: GitSubCommand() {
-            val initialize: Boolean by getFlagOpt()
+            val initialize: Boolean by getFlagOpt {
+                description = "initializes git lfs in this repo!"
+            }
         }
         class Checkout: GitSubCommand() {
 //            val message: String by getOpt()
@@ -355,7 +357,7 @@ class UsageExamples {
             at:       ~~~~~~~~
 
             usage: git lfs
-             -i,--initialize
+             -i,--initialize              initializes git lfs in this repo!
         """.trimIndent())
     }
 
@@ -376,7 +378,11 @@ class UsageExamples {
     }
 
     sealed class BetterGitSubCommand: Subcommand(){
-        data class Lfs(val initialize: Boolean): BetterGitSubCommand()
+        class Lfs: BetterGitSubCommand() {
+            val initialize: Boolean by getFlagOpt {
+                description = "initializes git lfs in this repo!"
+            }
+        }
         data class Checkout(val branchName: String): BetterGitSubCommand()
     }
 

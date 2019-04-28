@@ -45,6 +45,7 @@ abstract class CLI {
 
         //so the behaviour here is wierd if hostFactory returns an already initialized instance
         //do I want to commit to this flow & add error handling or do we want to use another scheme?
+        // where T: new() is pretty nifty...
 
         fun <T: CLI> parse(
                 programName: String,
@@ -82,6 +83,8 @@ abstract class CLI {
             val parser = Parser(parseErrorReporter, opts)
 
             val root = parser.parseCLI(tokens, programName)
+
+//            val x = root.toStringTree()
 
             val visitor = ValueCreationVisitor(opts, parseErrorReporter).apply { root.accept(this) }
 
@@ -180,7 +183,7 @@ inline fun <reified E: Any> CLI.getListOpt(noinline spec: ListOptionConfiguratio
 //cant think of a use case for a NullableList since emptyList serves as an effective monadic-unit.
 
 
-inline fun <reified C: CLI> CLI.getSubcommandOpt(noinline spec: SubcommandOptionConfiguration<C>.() -> Unit = {})
+inline fun <reified C: Subcommand> CLI.getSubcommandOpt(noinline spec: SubcommandOptionConfiguration<C>.() -> Unit = {})
         = getSubcommandOpt(this, spec, C::class)
 
 /**
@@ -210,8 +213,9 @@ fun <T: Any> getListOpt(cli: CLI, spec: ListOptionConfiguration<T>.() -> Unit, e
 fun <T: Any> getNullableOpt(cli: CLI, spec: NullableObjectOptionConfiguration<T>.() -> Unit, objectType: KClass<T>): NullableObjectOptionConfiguration<T>
         = NullableObjectOptionConfigurationImpl(objectType, spec)
 
-fun <T: CLI> getSubcommandOpt(cli: CLI, spec: SubcommandOptionConfiguration<T>.() -> Unit, objectType: KClass<T>): SubcommandOptionConfiguration<T>
-        = SubcommandOptionConfigurationImpl(objectType, spec)
+fun <T: Subcommand> getSubcommandOpt(cli: CLI, spec: SubcommandOptionConfiguration<T>.() -> Unit, objectType: KClass<T>): SubcommandOptionConfiguration<T> {
+    return SubcommandOptionConfigurationImpl(objectType, spec)
+}
 
 sealed class SpecialCaseInterpretation
 data class ConfigurationFailure(val configurationProblems: List<ConfigurationProblem>) : SpecialCaseInterpretation()

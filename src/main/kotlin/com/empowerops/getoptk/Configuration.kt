@@ -74,9 +74,9 @@ interface SubcommandOptionConfiguration<out C: CLI>: CommandLineOption<C>{
 
     var default: @UnsafeVariance C //TODO this isnt useful unless we can make CLI instances
 
-    fun <T: Any> registerCommand(commandName: String, commandType: KClass<T>)
+    fun <T: @UnsafeVariance C> registerCommand(commandName: String, commandType: KClass<T>)
 }
-inline fun <reified T: Any> SubcommandOptionConfiguration<CLI>.registerCommand(subcommandName: String) =
+inline fun <reified T: Subcommand> SubcommandOptionConfiguration<Subcommand>.registerCommand(subcommandName: String) =
         registerCommand(subcommandName, T::class)
 
 interface BooleanOptionConfiguration: ReadOnlyProperty<CLI, Boolean> {

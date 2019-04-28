@@ -2,7 +2,7 @@ package com.empowerops.getoptk
 
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
-import kotlin.reflect.full.createInstance
+import kotlin.reflect.full.primaryConstructor
 
 /**
  * Created by Geoff on 2017-04-29.
@@ -161,19 +161,17 @@ internal data class ListOptionConfigurationImpl<E: Any>(
     }
 }
 
-internal data class SubcommandOptionConfigurationImpl<C: CLI>(
+internal data class SubcommandOptionConfigurationImpl<C: Subcommand>(
         override val optionType: KClass<C>,
         val userConfig: SubcommandOptionConfiguration<C>.() -> Unit,
         override var isRequired: Boolean = true
 ) : AbstractCommandLineOption<C>(), SubcommandOptionConfiguration<C>{
 
-    private val subCommands = findSubCommands()
+    private var subCommandFactories: Map<String, () -> C> = emptyMap()
     internal lateinit var resolvedCommand: Subcommand
 
-    private fun findSubCommands() = optionType.sealedSubclasses.map { it.createInstance() }.map { it as Subcommand }
-
     internal fun hasSubcommandNamed(name: String): Boolean {
-        return name in subCommands.map { it.name }
+        return name in subCommandFactories.keys
     }
 
     private var _default: Any = DefaultValues[optionType] ?: NO_DEFAULT_AVAILABLE
@@ -187,21 +185,23 @@ internal data class SubcommandOptionConfigurationImpl<C: CLI>(
         }
 
 
-    fun resolveOpts(text: String, errorReporter: ParseErrorReporter): List<AbstractCommandLineOption<*>> {
-        resolvedCommand = subCommands.single { it.name == text }
+    fun resolveOpts(text: String): List<AbstractCommandLineOption<*>>? {
+        val resolvedCommandFactory = subCommandFactories[text] ?: return null;
+
+        resolvedCommand = resolvedCommandFactory()
 
         return resolvedCommand.optionProperties
     }
 
-    override fun <T: Any> registerCommand(subcommandName: String, type: KClass<T>) {
-        TODO()
+    override fun <T: C> registerCommand(commandName: String, commandType: KClass<T>) {
+        subCommandFactories += commandName to { commandType.primaryConstructor!!.call() }
     }
 
     override fun applyAdditionalConfiguration(thisRef: CLI, prop: KProperty<*>?) {
 
-        invokeAndReportErrorsTo(thisRef.errorReporter, this) { userConfig() }
+        subCommandFactories += optionType.sealedSubclasses.associate { it.simpleName!! to { it.primaryConstructor!!.call() } }
 
-//        if(_value == NoValue) _value = Value(default)
+        invokeAndReportErrorsTo(thisRef.errorReporter, this) { userConfig() }
     }
 }
 

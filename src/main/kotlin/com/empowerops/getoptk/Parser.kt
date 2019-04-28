@@ -38,7 +38,9 @@ internal class Parser(
     }
 
     /** as per [Parser]:
-     * [parseCLI] -> ( ([parseWindowsOption] OR [parseShortOption] OR [parseLongOption]) [SuperTokenSeparator])* OR (_subcommand-name_ [parseCLI])
+     * [parseCLI] ->
+     *   ( ([parseWindowsOption] OR [parseShortOption] OR [parseLongOption]) [SuperTokenSeparator])*
+     *   OR (_subcommand-name_ [parseCLI])
      **/
     fun parseCLI(tokens: List<Token>, commandName: String, config: SubcommandOptionConfigurationImpl<*>? = null): CLINode = analyzing(tokens) {
 
@@ -55,12 +57,12 @@ internal class Parser(
 
                     val subCommand = subCommands.firstOrNull { it.hasSubcommandNamed(next.text) }
 
-                    val x: CLINode = if(subCommand != null) {
+                    val result: CLINode = if(subCommand != null) {
 
                         expect<Argument>()
                         expect<SuperTokenSeparator>()
 
-                        val opts = subCommand.resolveOpts(next.text, errorReporter)
+                        val opts = subCommand.resolveOpts(next.text)
 
                         stack.push(opts)
                         try {
@@ -72,7 +74,7 @@ internal class Parser(
                         TODO() //positional arguments?
                     }
 
-                    x
+                    result
                 }
                 else -> logAndRecover("expected $Preambles")
             }
