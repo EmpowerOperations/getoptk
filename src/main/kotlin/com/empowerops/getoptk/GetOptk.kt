@@ -84,20 +84,20 @@ abstract class CLI {
 
             val root = parser.parseCLI(tokens, programName)
 
-//            val x = root.toStringTree()
+            val visitor = ValueCreationVisitor(opts, parseErrorReporter, programName, opts)
+            root.accept(visitor)
 
-            val visitor = ValueCreationVisitor(opts, parseErrorReporter).apply { root.accept(this) }
-
-            if(parseErrorReporter.requestedHelp){
-                altHandler(HelpRequested(cmd.makeHelpMessage(programName)))
+            if(parseErrorReporter.usages.any()){
+                altHandler(HelpRequested(parseErrorReporter.usages))
             }
             if(parseErrorReporter.parsingProblems.any()){
-                altHandler(ParseFailure(parseErrorReporter.parsingProblems, cmd.makeHelpMessage(programName)))
+                altHandler(ParseFailure(parseErrorReporter.parsingProblems))
             }
 
             val requiredButNotSpecifiedOptions: List<AbstractCommandLineOption<*>> = visitor.unconsumedOptions.filter { it.isRequired }
             if(requiredButNotSpecifiedOptions.any()){
-                altHandler(MissingOptions(requiredButNotSpecifiedOptions, cmd.makeHelpMessage(programName)))
+                TODO()
+//                altHandler(MissingOptions(requiredButNotSpecifiedOptions, cmd.makeHelpMessage(programName)))
             }
 
             // uhh, if `altHandler` is a no-op, and we encounter all of the above errors,
@@ -214,13 +214,13 @@ fun <T: Any> getNullableOpt(cli: CLI, spec: NullableObjectOptionConfiguration<T>
         = NullableObjectOptionConfigurationImpl(objectType, spec)
 
 fun <T: Subcommand> getSubcommandOpt(cli: CLI, spec: SubcommandOptionConfiguration<T>.() -> Unit, objectType: KClass<T>): SubcommandOptionConfiguration<T> {
-    return SubcommandOptionConfigurationImpl(objectType, spec)
+    return SubcommandOptionConfigurationImpl(cli, objectType, spec)
 }
 
 sealed class SpecialCaseInterpretation
 data class ConfigurationFailure(val configurationProblems: List<ConfigurationProblem>) : SpecialCaseInterpretation()
-data class ParseFailure(val parseProblems: List<ParseProblem>, val helpMessage: String) : SpecialCaseInterpretation()
-data class HelpRequested(val helpMessage: String) : SpecialCaseInterpretation()
+data class ParseFailure(val parseProblems: List<ParseProblem>) : SpecialCaseInterpretation()
+data class HelpRequested(val helpMessages: List<UsageRequest>) : SpecialCaseInterpretation()
 data class MissingOptions(val missingOptions: List<CommandLineOption<*>>, val helpMessage: String): SpecialCaseInterpretation()
 
 fun throwSpecialCase(specialCase: SpecialCaseInterpretation): Nothing = when(specialCase){
@@ -230,10 +230,7 @@ fun throwSpecialCase(specialCase: SpecialCaseInterpretation): Nothing = when(spe
     is MissingOptions -> throw MissingOptionsException(specialCase)
 }
 
-private val stg = STGroup().apply {
-
-}
-private fun CLI.makeHelpMessage(programName: String): String {
+internal fun makeHelpMessage(programName: String, optionProperties: List<AbstractCommandLineOption<*>>): String {
     //TODO: get this off STG such that we dont have the dep anymore
     // fruther its not really the right tool anyways.
 

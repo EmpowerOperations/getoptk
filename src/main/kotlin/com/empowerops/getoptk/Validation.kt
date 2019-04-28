@@ -53,6 +53,7 @@ private fun ConfigErrorReporter.checkConverter(newOption: AbstractCommandLineOpt
         is SubcommandOptionConfigurationImpl -> {
             //TODO
         }
+        AbstractCommandLineOption.Error -> TODO()
     }
 }
 

@@ -1,13 +1,25 @@
 package com.empowerops.getoptk
 
+import java.util.*
 import kotlin.reflect.full.cast
 
-internal class ValueCreationVisitor(val allOptions: List<AbstractCommandLineOption<*>>, val errorReporter: ParseErrorReporter) {
+internal class ValueCreationVisitor(
+        val allOptions: List<AbstractCommandLineOption<*>>,
+        val errorReporter: ParseErrorReporter,
+        rootCommandName: String,
+        rootOpts: List<AbstractCommandLineOption<*>>
+) {
 
     var unconsumedOptions: List<AbstractCommandLineOption<*>> = allOptions
         private set
 
-    fun visitEnter(cliNode: CLINode) {}
+    private val commandName: Deque<String> = LinkedList(listOf(rootCommandName))
+    private val commandOpts: Deque<List<AbstractCommandLineOption<*>>> = LinkedList(listOf(rootOpts))
+
+    fun visitEnter(cliNode: CLINode) {
+        commandName.push("${commandName.peek()} ${cliNode.commandName}")
+        commandOpts.push(cliNode.opts)
+    }
     fun visitLeave(cliNode: CLINode) {
         val config = cliNode.config ?: return
 
@@ -16,6 +28,8 @@ internal class ValueCreationVisitor(val allOptions: List<AbstractCommandLineOpti
         val instance: Any? = config.optionType.cast(config.resolvedCommand)
         config._value = Value(instance) as ValueStrategy<Nothing>
 
+        commandName.pop()
+        commandOpts.pop()
     }
 
     fun visitEnter(optionNode: BooleanOptionNode) {}
@@ -24,7 +38,7 @@ internal class ValueCreationVisitor(val allOptions: List<AbstractCommandLineOpti
         unconsumedOptions -= config
 
         if(config.isHelp){
-            errorReporter.requestedHelp = true
+            errorReporter.printUsage(commandName.peek(), commandOpts.peek())
         }
 
         config._value = when(config.interpretation){
@@ -97,7 +111,7 @@ internal class ValueCreationVisitor(val allOptions: List<AbstractCommandLineOpti
     fun visitEnter(errorNode: ErrorNode) {}
     fun visitLeave(errorNode: ErrorNode) {}
 
-    private fun reportError(token: Token, exception: Exception, config: AbstractCommandLineOption<*>? = null){
+    private fun reportError(token: Token, exception: Exception, config: AbstractCommandLineOption<*>){
 
         // I really cant stand the idea of catching debugging-oriented errors,
         // so I'm going to throw them immediately.
@@ -106,7 +120,7 @@ internal class ValueCreationVisitor(val allOptions: List<AbstractCommandLineOpti
         }
         else {
             val message = "Failed to parse value" + if (config != null) " for "+config.toPropertyDescriptor() else ""
-            errorReporter.reportParsingProblem(token, message, exception)
+            errorReporter.reportParsingProblem(token, message, commandName.peek(), listOf(config), exception)
         }
     }
     

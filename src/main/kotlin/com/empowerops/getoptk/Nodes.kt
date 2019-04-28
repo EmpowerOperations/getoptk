@@ -51,7 +51,8 @@ internal fun ParseNode.toStringTree(): String {
 internal data class CLINode(
         val commandName: String,
         override val children: List<ParseNode>,
-        val config: SubcommandOptionConfigurationImpl<*>? = null
+        val config: SubcommandOptionConfigurationImpl<*>? = null,
+        val opts: List<AbstractCommandLineOption<*>>
 ): ParseNode()
 
 internal data class BooleanOptionNode(

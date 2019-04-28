@@ -61,6 +61,7 @@ internal fun AbstractCommandLineOption<*>.toPropertyDescriptor(): String {
         is ObjectOptionConfigurationImpl<*> -> "getOpt"
         is NullableObjectOptionConfigurationImpl<*> -> "getNullableOpt"
         is SubcommandOptionConfigurationImpl<*> -> "getCommandOpt"
+        AbstractCommandLineOption.Error -> TODO()
     }
 
     return "$valOrVarPrefix $name: $type by $getOptFlavour()"

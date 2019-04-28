@@ -2,6 +2,7 @@ package com.empowerops.getoptk
 
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
+import kotlin.reflect.full.cast
 import kotlin.reflect.full.primaryConstructor
 
 /**
@@ -65,6 +66,18 @@ internal sealed class AbstractCommandLineOption<out T>: CommandLineOption<T> {
     final override operator fun getValue(thisRef: CLI, property: KProperty<*>): T = value
 
     fun toKeyValueString() = "${property.name}=$valueString"
+
+    companion object Error: AbstractCommandLineOption<Nothing>() {
+        override var isRequired: Boolean
+            get() = TODO("not implemented")
+            set(value) { TODO() }
+        override val optionType: KClass<*>
+            get() = TODO("not implemented")
+        override fun applyAdditionalConfiguration(thisRef: CLI, prop: KProperty<*>?) {
+            TODO("not implemented")
+        }
+
+    }
 }
 
 
@@ -162,6 +175,7 @@ internal data class ListOptionConfigurationImpl<E: Any>(
 }
 
 internal data class SubcommandOptionConfigurationImpl<C: Subcommand>(
+        val cli: CLI,
         override val optionType: KClass<C>,
         val userConfig: SubcommandOptionConfiguration<C>.() -> Unit,
         override var isRequired: Boolean = true
@@ -186,7 +200,7 @@ internal data class SubcommandOptionConfigurationImpl<C: Subcommand>(
 
 
     fun resolveOpts(text: String): List<AbstractCommandLineOption<*>>? {
-        val resolvedCommandFactory = subCommandFactories[text] ?: return null;
+        val resolvedCommandFactory = subCommandFactories[text] ?: return null
 
         resolvedCommand = resolvedCommandFactory()
 
@@ -199,7 +213,7 @@ internal data class SubcommandOptionConfigurationImpl<C: Subcommand>(
 
     override fun applyAdditionalConfiguration(thisRef: CLI, prop: KProperty<*>?) {
 
-        subCommandFactories += optionType.sealedSubclasses.associate { it.simpleName!! to { it.primaryConstructor!!.call() } }
+        subCommandFactories += optionType.sealedSubclasses.associate { it.simpleName!!.toLowerCase() to { it.primaryConstructor!!.call() } }
 
         invokeAndReportErrorsTo(thisRef.errorReporter, this) { userConfig() }
     }
@@ -239,14 +253,16 @@ internal data class ObjectOptionConfigurationImpl<T: Any>(
             Value(default)
         }
         else {
-//            val provider = makeProviderOf(optionType, converters)
-//
-//            if(provider is UnrolledAndUntypedFactory<*> && provider.arity == 0) {
-//                Provider { optionType.cast(provider.make(emptyList())) }
-//            }
-//            else {
+            TODO("this code pretty clearly jumps the shark")
+            
+            val provider = makeProviderOf(optionType, converters)
+
+            if(provider is UnrolledAndUntypedFactory<*> && provider.arity == 0) {
+                Provider { optionType.cast(provider.make(emptyList())) }
+            }
+            else {
                 NoValue
-//            }
+            }
         }
     }
 }

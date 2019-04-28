@@ -350,7 +350,7 @@ class UsageExamples {
 
         //assert
         assertThat(ex.message).isEqualTo("""
-            com.empowerops.getoptk.ParseFailedException: Failure in command line:
+            Failure in parsing command line:
 
             unknown option 'hogwarts', expected 'initialize'
             git lfs --hogwarts 9.75
@@ -366,8 +366,8 @@ class UsageExamples {
 
         val command: BetterGitCLI = args.parsedAs("git") { BetterGitCLI() }
 
-        assertThat(command.subCommand).isInstanceOf(GitSubCommand.Lfs::class.java)
-        assertThat((command.subCommand as GitSubCommand.Lfs).initialize).isTrue()
+        assertThat(command.subCommand).isInstanceOf(BetterGitSubCommand.Lfs::class.java)
+        assertThat((command.subCommand as BetterGitSubCommand.Lfs).initialize).isTrue()
     }
 
     class BetterGitCLI: CLI() {
@@ -394,14 +394,14 @@ class UsageExamples {
 
         //assert
         assertThat(ex.message).isEqualTo("""
-            com.empowerops.getoptk.ParseFailedException: Failure in command line:
+            Failure in parsing command line:
 
             unknown option 'hogwarts', expected 'initialize'
             git lfs --hogwarts 9.75
             at:       ~~~~~~~~
 
             usage: git lfs
-             -i,--initialize
+             -i,--initialize              initializes git lfs in this repo!
         """.trimIndent())
     }
 }

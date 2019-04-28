@@ -7,7 +7,8 @@ package com.empowerops.getoptk
 
 data class ConfigurationProblem(val message: String, val stackTrace: Exception = ConfigurationExceptionCause())
 
-data class ParseProblem(val message: String, val stackTrace: Exception?)
+data class ParseProblem(val message: String, val stackTrace: Exception?, val usage: String)
+data class UsageRequest(val usage: String)
 
 class ConfigErrorReporter(){
 
@@ -35,9 +36,14 @@ class ParseErrorReporter(val programNamePrefix: String, val tokens: List<Token>)
     var parsingProblems: List<ParseProblem> = emptyList()
         private set
 
-    var requestedHelp: Boolean = false
+    var usages: List<UsageRequest> = emptyList()
+        private set
 
-    fun reportParsingProblem(token: Token, message: String, exception: Exception? = null){
+    internal fun printUsage(commandName: String, opts: List<AbstractCommandLineOption<*>>){
+        usages += UsageRequest(makeHelpMessage(commandName, opts))
+    }
+
+    internal fun reportParsingProblem(token: Token, message: String, commandName: String, opts: List<AbstractCommandLineOption<*>>, exception: Exception? = null){
         
         val tokens = tokens.dropLastWhile { it is SuperTokenSeparator }
         val commandLine = programNamePrefix + " " + tokens.joinToString(separator = "") { it.text }
@@ -51,17 +57,20 @@ class ParseErrorReporter(val programNamePrefix: String, val tokens: List<Token>)
                 """$message
                   |$commandLine
                   |at:$superposition
+                  |
                   |${exception ?: ""}
                   """.trimMargin().trim()
 
-        parsingProblems += ParseProblem(rendered, exception)
+        val usage = makeHelpMessage(commandName, opts)
+
+        parsingProblems += ParseProblem(rendered, exception, usage)
     }
 
     fun debug(message: () -> String){
 //        println("debug: ${message()}")
     }
     fun internalError(token: Token, errorMessage: String) {
-        println("internal error at $token: $errorMessage")
+        System.err.println("internal error at $token: $errorMessage")
     }
 }
 
@@ -89,12 +98,10 @@ class ParseFailedException private constructor(message: String, cause: Exception
     companion object {
         operator fun invoke(failure: ParseFailure): ParseFailedException {
 
-            val newlineSeparatedMessages = failure.parseProblems.joinToString("\n\n") { it.message }
-            val message = """Failure in command line:
+            val newlineSeparatedMessages = failure.parseProblems.joinToString("\n\n") { it.message + "\n\n" + it.usage }
+            val message = """Failure in parsing command line:
                 |
                 |$newlineSeparatedMessages
-                |
-                |${failure.helpMessage}
                 """.trimMargin()
 
             val exceptions = failure.parseProblems.map { it.stackTrace }
@@ -110,7 +117,7 @@ class ParseFailedException private constructor(message: String, cause: Exception
 
 class HelpException private constructor(message: String) : RuntimeException(message) {
     companion object {
-        operator fun invoke(failure: HelpRequested) = HelpException(failure.helpMessage)
+        operator fun invoke(failure: HelpRequested) = HelpException(failure.helpMessages.joinToString("\n\n"))
     }
 }
 
