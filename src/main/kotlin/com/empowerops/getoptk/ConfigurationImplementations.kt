@@ -219,6 +219,11 @@ internal data class SubcommandOptionConfigurationImpl<C: Subcommand>(
     }
 }
 
+sealed class DefaultStrategy<out T> {}
+object InvokeConstructorsWithDefaults: DefaultStrategy<Nothing>()
+class DefaultValue<T>(val value: T): DefaultStrategy<T>()
+object NoDefaultAvailable: DefaultStrategy<Nothing>()
+
 internal data class ObjectOptionConfigurationImpl<T: Any>(
         override val optionType: KClass<T>,
         val userConfig: ObjectOptionConfigurationImpl<T>.() -> Unit,
@@ -228,14 +233,14 @@ internal data class ObjectOptionConfigurationImpl<T: Any>(
     override var converters: ConverterSet = ConverterSet(emptyMap())
     override var factoryOrErrors: FactorySearchResult<T> = NullFactory
 
-    private var _default: Any = NO_DEFAULT_AVAILABLE
-    override var default: T
-        get(){
-            if (_default != NO_DEFAULT_AVAILABLE) @Suppress("UNCHECKED_CAST") return _default as T
-            else throw IllegalStateException("'default' is write-only as it currently has no value")
+    override var defaultStrategy: DefaultStrategy<T> = NoDefaultAvailable
+    override var default: T?
+        get() = when(val value = defaultStrategy){
+            is DefaultValue -> value.value
+            else -> null
         }
         set(value) {
-            _default = value
+            defaultStrategy = value.takeIf { it != null }?.let { DefaultValue(it) } ?: NoDefaultAvailable
         }
 
     override fun <N : Any> registerConverter(type: KClass<N>, converter: Converter<N>) {
@@ -249,20 +254,19 @@ internal data class ObjectOptionConfigurationImpl<T: Any>(
         //this line must be done after the user has been allowed to configure the converters
         factoryOrErrors = makeFactoryFor(optionType, converters)
 
-        _value = if(_default != NO_DEFAULT_AVAILABLE) {
-            Value(default)
-        }
-        else {
-            TODO("this code pretty clearly jumps the shark")
-            
-            val provider = makeProviderOf(optionType, converters)
+        _value = when(val defaultStrat = defaultStrategy){
+            InvokeConstructorsWithDefaults -> {
+                val provider = makeProviderOf(optionType, converters)
 
-            if(provider is UnrolledAndUntypedFactory<*> && provider.arity == 0) {
-                Provider { optionType.cast(provider.make(emptyList())) }
+                if(provider is UnrolledAndUntypedFactory<*> && provider.arity == 0) {
+                    Provider { optionType.cast(provider.make(emptyList())) }
+                }
+                else {
+                    NoValue
+                }
             }
-            else {
-                NoValue
-            }
+            is DefaultValue<T> -> Value(defaultStrat.value)
+            NoDefaultAvailable -> NoValue
         }
     }
 }

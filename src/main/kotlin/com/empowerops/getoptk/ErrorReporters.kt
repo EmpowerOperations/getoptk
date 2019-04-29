@@ -117,7 +117,8 @@ class ParseFailedException private constructor(message: String, cause: Exception
 
 class HelpException private constructor(message: String) : RuntimeException(message) {
     companion object {
-        operator fun invoke(failure: HelpRequested) = HelpException(failure.helpMessages.joinToString("\n\n"))
+        operator fun invoke(failure: HelpRequested) =
+                HelpException(failure.helpMessages.joinToString("\n\n") { it.usage })
     }
 }
 

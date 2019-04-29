@@ -55,11 +55,12 @@ class RuntimeErrorHandlingFixture {
 
         //assert
         assertThat(ex.message!!.trimLineEnds()).isEqualTo(
-                """Failure in command line:
+                """Failure in parsing command line:
                   |
                   |Failed to parse value for val eh: A by getOpt()
                   |prog --eh hello_world 1.0
                   |at:                   ~~~
+                  |
                   |java.lang.NumberFormatException: For input string: "1.0"
                   |
                   |usage: prog
@@ -85,7 +86,7 @@ class RuntimeErrorHandlingFixture {
 
         //assert
         assertThat(ex.message!!.trimLineEnds()).isEqualTo(
-                """Failure in command line:
+                """Failure in parsing command line:
                   |
                   |unknown option 'name', expected 'parsable', 'help'
                   |prog --name bob
@@ -93,6 +94,7 @@ class RuntimeErrorHandlingFixture {
                   |
                   |usage: prog
                   | -p,--parsable <value>
+                  | -h,--help
                   """.trimMargin()
         )
     }
@@ -114,11 +116,12 @@ class RuntimeErrorHandlingFixture {
 
         //assert
         assertThat(ex.message!!.trimLineEnds()).isEqualTo(
-                """Failure in command line:
+                """Failure in parsing command line:
                   |
                   |Failed to parse value for val problem: String by getValueOpt()
                   |prog --problem sam
                   |at:            ~~~
+                  |
                   |java.lang.UnsupportedOperationException: no sam's allowed!
                   |
                   |usage: prog

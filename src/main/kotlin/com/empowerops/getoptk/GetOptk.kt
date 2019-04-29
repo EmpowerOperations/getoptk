@@ -246,5 +246,5 @@ internal fun makeHelpMessage(programName: String, optionProperties: List<Abstrac
 
     val result = st.render(80)
 
-    return result
+    return result.trim()
 }

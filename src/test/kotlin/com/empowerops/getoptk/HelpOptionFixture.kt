@@ -27,6 +27,7 @@ class HelpOptionFixture {
               |                                elit, sed do eiusmod tempor incididunt ut labore${` `}
               |                                et dolore magna aliqua. Ut enim ad minim veniam,${` `}
               |                                quis nostrud exercitation ullamco laboris nisi ut
+              | -h,--help
             """.trimMargin().replace("\n", System.lineSeparator()).trim()
         )
     }
@@ -56,6 +57,7 @@ class HelpOptionFixture {
               |                                elit, sed do eiusmod tempor incididunt ut labore${` `}
               |                                et dolore magna aliqua. Ut enim ad minim veniam,${` `}
               |                                quis nostrud exercitation ullamco laboris nisi ut
+              | -h,--help
             """.trimMargin().replace("\n", System.lineSeparator()).trim()
         )
     }
@@ -89,6 +91,7 @@ class HelpOptionFixture {
               | ly-long-name
               | <decimal>
               | -a,--a <int>
+              | -h,--help
             """.trimMargin().replace("\n", System.lineSeparator()).trim()
         )
     }

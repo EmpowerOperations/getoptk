@@ -13,11 +13,12 @@ internal class ValueCreationVisitor(
     var unconsumedOptions: List<AbstractCommandLineOption<*>> = allOptions
         private set
 
-    private val commandName: Deque<String> = LinkedList(listOf(rootCommandName))
-    private val commandOpts: Deque<List<AbstractCommandLineOption<*>>> = LinkedList(listOf(rootOpts))
+    private val commandName: Deque<String> = LinkedList()
+    private val commandOpts: Deque<List<AbstractCommandLineOption<*>>> = LinkedList()
 
     fun visitEnter(cliNode: CLINode) {
-        commandName.push("${commandName.peek()} ${cliNode.commandName}")
+        val baseName = if(commandName.any()) "${commandName.peek()} " else ""
+        commandName.push("$baseName${cliNode.commandName}")
         commandOpts.push(cliNode.opts)
     }
     fun visitLeave(cliNode: CLINode) {
@@ -28,8 +29,8 @@ internal class ValueCreationVisitor(
         val instance: Any? = config.optionType.cast(config.resolvedCommand)
         config._value = Value(instance) as ValueStrategy<Nothing>
 
-        commandName.pop()
         commandOpts.pop()
+        commandName.pop()
     }
 
     fun visitEnter(optionNode: BooleanOptionNode) {}

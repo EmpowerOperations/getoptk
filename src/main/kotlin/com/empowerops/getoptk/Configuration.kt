@@ -12,7 +12,8 @@ interface ObjectOptionConfiguration<T>: ReadOnlyProperty<CLI, T> {
     var longName: String
 
     var isRequired: Boolean
-    var default: T
+    var default: T?
+    var defaultStrategy: DefaultStrategy<T>
 
     fun <N: Any> registerConverter(type: KClass<N>, converter: Converter<N>): Unit
 }

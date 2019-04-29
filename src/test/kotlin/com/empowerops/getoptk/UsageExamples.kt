@@ -315,6 +315,7 @@ class UsageExamples {
     class NonDefaultedCLI: CLI(){
         val nonnullable: SimpleDTO by getOpt{
             isRequired = false
+            defaultStrategy = InvokeConstructorsWithDefaults
         }
     }
 

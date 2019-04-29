@@ -33,7 +33,8 @@ operator fun <T: CLI> SubcommandOptionConfiguration<T>.provideDelegate(thisRef: 
 
 //endregion
 
-internal fun <T, E> provideDelegateImpl(host: T, thisRef: CLI, prop: KProperty<*>): T where T: ReadOnlyProperty<CLI, E> {
+internal fun <T, E> provideDelegateImpl(host: T, thisRef: CLI, prop: KProperty<*>): T
+        where T: ReadOnlyProperty<CLI, E> {
     (host as AbstractCommandLineOption<*>).provideDelegateImpl(thisRef, prop)
     return host
 }
