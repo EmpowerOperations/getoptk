@@ -102,22 +102,17 @@ data class SuperTokenSeparator(val index: Int): SeparatorToken {
     override val text = " "
     override val location = index .. index + text.length -1
 }
-data class AssignmentSeparator(override val index: Int): Lemma, SeparatorToken { override val Lemma = "=" }
-data class MinorSeparator(override val index: Int): Lemma, SeparatorToken { override val Lemma = "," }
+data class AssignmentSeparator(override val index: Int): Lemma, SeparatorToken { override val Lemma get() = "=" }
+data class MinorSeparator(override val index: Int): Lemma, SeparatorToken { override val Lemma get() = "," }
 
-data class ShortPreamble(override val index: Int): Lemma, OptionPreambleToken { override val Lemma = "-"; }
-data class LongPreamble(override val index: Int): Lemma, OptionPreambleToken { override val Lemma = "--"; }
-data class WindowsPreamble(override val index: Int): Lemma, OptionPreambleToken { override val Lemma = "/"; }
+data class ShortPreamble(override val index: Int): Lemma, OptionPreambleToken { override val Lemma get() = "-"; }
+data class LongPreamble(override val index: Int): Lemma, OptionPreambleToken { override val Lemma get() = "--"; }
+data class WindowsPreamble(override val index: Int): Lemma, OptionPreambleToken { override val Lemma get() = "/"; }
 
 sealed class OptionName: Token {}
 data class ShortOptionName(override val text: String, override val index: Int): OptionName(), Word, Token { init { require(text.length == 1) } }
 data class LongOptionName(override val text: String, override val index: Int): OptionName(), Word, Token
 data class Argument(override val text: String, override val index: Int): Word, Token
-
-data class ListItemText(val parent: Token, val rangeInParent: IntRange): Token {
-    override val text: String get() = parent.text.substring(rangeInParent)
-    override val location: IntRange get() = parent.location.start.offset(rangeInParent)
-}
 
 fun <T> T.asSingleList() = listOf(this)
 fun Int.offset(range: IntRange) = this + range.start .. this + range.endInclusive

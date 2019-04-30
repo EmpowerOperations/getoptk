@@ -26,46 +26,39 @@ class Marker(
     fun peek(lookAhead: Int = 0) = if(index+lookAhead >= tokens.size) Epsilon else tokens[index+lookAhead]
     fun rest(): List<Token> = this
 
-    inline fun <reified T: Token> expect(): Token {
+    inline fun <reified T: Token> expect(): Token
+            = expect("expected ${T::class.simpleName}") { it is T }
+    inline fun <reified T1: Token, reified T2: Token> expectEither()
+            = expect("expected ${T1::class.simpleName} or ${T2::class.simpleName}") { it is T1 || it is T2 }
+
+    fun expect(message: String, requirement: (Token) -> Boolean): Token {
         val next = next()
-        if (next !is T){
-            errorReporter.internalError(next, "token type miss-match: expected token of type ${T::class.simpleName} ")
+        if ( ! requirement(next)){
+            errorReporter.reportParsingProblem(next, message)
         }
-
         return next
-    }
-
-    inline fun <reified T: Token> nextIs(noinline condition: (T) -> Boolean = { true }) = nextIs(T::class, condition)
-
-    fun <T: Any> nextIs(type: KClass<T>, condition: (T) -> Boolean = { true }): Boolean{
-        if ( ! hasNext()) return false
-        val current = next()
-        return type.java.isInstance(current) && condition(current as T)
     }
 
     override fun toString() = "previous:${previous()}, rest:${rest()}"
 }
 
-internal fun <R> ErrorReporting.analyzing(tokens: List<Token>, block: Marker.() -> R): R {
+internal fun <R> ErrorReporting.analyzing(
+        tokens: List<Token>,
+        commandName: String? = null,
+        opts: List<AbstractCommandLineOption<*>>? = null,
+        block: Marker.() -> R
+): R {
 
     val marker = tokens as? Marker ?: Marker(errorReporter, tokens)
 
     marker.pushMark()
+    marker.errorReporter.enterScope(commandName, opts)
 
     try {
         return marker.block()
     }
     finally {
         val readTokens = marker.popMarkedTokens()
-        log(readTokens)
-    }
-}
-
-private fun ErrorReporting.log(tokens: List<Token>) {
-    errorReporter.debug {
-        """finished analysis
-          |lastReadToken=${tokens.last()}
-          |allReadTokens=$tokens
-          """.trimMargin()
+        marker.errorReporter.exitScope()
     }
 }

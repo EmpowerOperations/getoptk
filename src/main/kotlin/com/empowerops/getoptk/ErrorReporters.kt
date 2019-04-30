@@ -1,5 +1,7 @@
 package com.empowerops.getoptk
 
+import java.util.*
+
 /**
  * Created by Geoff on 2017-03-09.
  */
@@ -39,11 +41,30 @@ class ParseErrorReporter(val programNamePrefix: String, val tokens: List<Token>)
     var usages: List<UsageRequest> = emptyList()
         private set
 
+    private var commandScope: Deque<Pair<String, List<AbstractCommandLineOption<*>>>> = LinkedList()
+
+    internal fun enterScope(commandName: String?, opts: List<AbstractCommandLineOption<*>>?){
+        val prev = commandScope.peek()
+        commandScope.push((commandName ?: prev.first) to (opts ?: prev.second))
+    }
+    internal fun exitScope(){
+        commandScope.pop()
+    }
+
     internal fun printUsage(commandName: String, opts: List<AbstractCommandLineOption<*>>){
         usages += UsageRequest(makeHelpMessage(commandName, opts))
     }
-
-    internal fun reportParsingProblem(token: Token, message: String, commandName: String, opts: List<AbstractCommandLineOption<*>>, exception: Exception? = null){
+    fun reportParsingProblem(token: Token, errorMessage: String) {
+        val (name, opts) = commandScope.peek()
+        reportParsingProblem(token, errorMessage, name, opts)
+    }
+    internal fun reportParsingProblem(
+            token: Token,
+            message: String,
+            commandName: String,
+            opts: List<AbstractCommandLineOption<*>>,
+            exception: Exception? = null
+    ){
         
         val tokens = tokens.dropLastWhile { it is SuperTokenSeparator }
         val commandLine = programNamePrefix + " " + tokens.joinToString(separator = "") { it.text }
@@ -63,14 +84,18 @@ class ParseErrorReporter(val programNamePrefix: String, val tokens: List<Token>)
 
         val usage = makeHelpMessage(commandName, opts)
 
-        parsingProblems += ParseProblem(rendered, exception, usage)
+        val updatedException = if(!debug) exception else Exception(exception)
+
+        parsingProblems += ParseProblem(rendered, updatedException, usage)
     }
 
     fun debug(message: () -> String){
-//        println("debug: ${message()}")
+        if(debug){
+            println("debug: ${message()}")
+        }
     }
     fun internalError(token: Token, errorMessage: String) {
-        System.err.println("internal error at $token: $errorMessage")
+        throw Exception("internal error at $token: $errorMessage")
     }
 }
 

@@ -45,15 +45,15 @@ internal class Parser(
             commandName: String,
             subcommandConfig: SubcommandOptionConfigurationImpl<*>? = null,
             optConfigs: List<AbstractCommandLineOption<*>> = rootComponentCombinators
-    ): CLINode = analyzing(tokens) {
+    ): CLINode = analyzing(tokens, commandName, optConfigs) {
 
         var children = emptyList<ParseNode>()
 
         while(hasNext()){
             val newChild = when(val next = peek()){
-                is WindowsPreamble -> parseWindowsOption(rest(), commandName, optConfigs)
-                is ShortPreamble -> parseShortOption(rest(), commandName, optConfigs)
-                is LongPreamble -> parseLongOption(rest(), commandName, optConfigs)
+                is WindowsPreamble -> parseWindowsOption(rest(), optConfigs)
+                is ShortPreamble -> parseShortOption(rest(), optConfigs)
+                is LongPreamble -> parseLongOption(rest(), optConfigs)
                 is Argument -> {
 
                     val subCommands = optConfigs.filterIsInstance<SubcommandOptionConfigurationImpl<*>>()
@@ -75,7 +75,7 @@ internal class Parser(
 
                     result
                 }
-                else -> logAndRecover("expected $Preambles", commandName, optConfigs)
+                else -> logAndRecover("expected $Preambles")
             }
 
             children += newChild
@@ -89,12 +89,12 @@ internal class Parser(
     /** as per [Parser]:
      * [parseLongOption] -> [LongPreamble] [LongOptionName] [parseOptionsBackHalf]
      **/
-    private fun parseLongOption(tokens: List<Token>, commandName: String, opts: List<AbstractCommandLineOption<*>>): ParseNode = analyzing(tokens) {
+    private fun parseLongOption(tokens: List<Token>, opts: List<AbstractCommandLineOption<*>>): ParseNode = analyzing(tokens) {
 
         val preamble = expect<LongPreamble>()
         val optName = expect<LongOptionName>()
 
-        val (config, argNodes) = parseOptionsBackHalf(optName, rest(), commandName, opts)
+        val (config, argNodes) = parseOptionsBackHalf(optName, rest(), opts)
 
         return@analyzing makeOptionNode(preamble, optName, config, argNodes)
     }
@@ -103,12 +103,12 @@ internal class Parser(
     /** as per [Parser]:
      * [parseShortOption] -> [ShortPreamble] [ShortOptionName] [parseOptionsBackHalf]
      **/
-    private fun parseShortOption(tokens: List<Token>, commandName: String, opts: List<AbstractCommandLineOption<*>>): ParseNode = analyzing(tokens) {
+    private fun parseShortOption(tokens: List<Token>, opts: List<AbstractCommandLineOption<*>>): ParseNode = analyzing(tokens) {
 
         val preamble = expect<ShortPreamble>()
         val optName = expect<ShortOptionName>()
 
-        val (config, argNodes) = parseOptionsBackHalf(optName, rest(), commandName, opts)
+        val (config, argNodes) = parseOptionsBackHalf(optName, rest(), opts)
 
         return@analyzing makeOptionNode(preamble, optName, config, argNodes)
     }
@@ -116,7 +116,7 @@ internal class Parser(
     /** as per [Parser]:
      * [parseWindowsOption] -> [WindowsPreamble] ([ShortOptionName] OR [LongOptionName]) [parseOptionsBackHalf]
      **/
-    fun parseWindowsOption(tokens: List<Token>, commandName: String, opts: List<AbstractCommandLineOption<*>>): ParseNode = analyzing(tokens){
+    fun parseWindowsOption(tokens: List<Token>, opts: List<AbstractCommandLineOption<*>>): ParseNode = analyzing(tokens){
 
         val preamble = expect<WindowsPreamble>()
 
@@ -125,10 +125,10 @@ internal class Parser(
         optName = when (optName){
             is ShortOptionName -> optName
             is LongOptionName -> optName
-            else -> return@analyzing logAndRecover("expected ${availableOptions(opts)}", commandName, opts)
+            else -> return@analyzing logAndRecover("expected ${availableOptions(opts)}")
         }
 
-        val (config, valueNode) = parseOptionsBackHalf(optName, rest(), commandName, opts)
+        val (config, valueNode) = parseOptionsBackHalf(optName, rest(), opts)
 
         return@analyzing makeOptionNode(preamble, optName, config, valueNode)
     }
@@ -141,7 +141,6 @@ internal class Parser(
     private fun parseOptionsBackHalf(
             optName: Token,
             tokens: List<Token>,
-            commandName: String,
             availableOptConfigs: List<AbstractCommandLineOption<*>>
     ) : Pair<AbstractCommandLineOption<*>?, ParseNode> = analyzing(tokens){
 
@@ -165,9 +164,7 @@ internal class Parser(
                 }}
                 errorReporter.reportParsingProblem(
                         optName,
-                        "unknown option '$problemOpt', expected ${available.qcs}",
-                        commandName,
-                        availableOptConfigs
+                        "unknown option '$problemOpt', expected ${available.qcs}"
                 )
 
                 if(peek() is SuperTokenSeparator && peek(1) is Argument){
@@ -227,7 +224,7 @@ internal class Parser(
 
         // so I was thinking about trying to employ a fancy re-lexing strategy here,
         // but im not sure what the advantage is
-        val separator = expect<SuperTokenSeparator>()
+        val separator = expectEither<SuperTokenSeparator, AssignmentSeparator>()
         val argument = expect<Argument>()
 
         val values = argument.text.split(',')
@@ -303,9 +300,9 @@ internal class Parser(
         return componentCombinators.flatMap { it.names() }.joinToString("' or '", "'", "'")
     }
 
-    private fun Marker.logAndRecover(message: String, commandName: String, opts: List<AbstractCommandLineOption<*>>): ErrorNode {
+    private fun Marker.logAndRecover(message: String): ErrorNode {
 
-        errorReporter.reportParsingProblem(peek(), message, commandName, opts)
+        errorReporter.reportParsingProblem(peek(), message)
 
         while(peek(1) !is Epsilon && ! startsNewOption()) {
             next()
