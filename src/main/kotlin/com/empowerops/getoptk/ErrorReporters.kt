@@ -7,9 +7,8 @@ import java.util.*
  */
 
 
-data class ConfigurationProblem(val message: String, val stackTrace: Exception = ConfigurationExceptionCause())
-
-data class ParseProblem(val message: String, val stackTrace: Exception?, val usage: String)
+data class ConfigurationProblem(val message: String, val stackTrace: Exception? = null){}
+data class ParseProblem(val message: String, val stackTrace: Exception?, val usage: String){}
 data class UsageRequest(val usage: String)
 
 class ConfigErrorReporter(){
@@ -51,15 +50,16 @@ class ParseErrorReporter(val programNamePrefix: String, val tokens: List<Token>)
         commandScope.pop()
     }
 
-    internal fun printUsage(commandName: String, opts: List<AbstractCommandLineOption<*>>){
+    internal fun printUsage(){
+        val (commandName, opts) = commandScope.peek()
         usages += UsageRequest(makeHelpMessage(commandName, opts))
     }
-    fun reportParsingProblem(token: Token, errorMessage: String) {
+    fun reportParsingProblem(token: Token?, errorMessage: String, exception: Exception? = null) {
         val (name, opts) = commandScope.peek()
-        reportParsingProblem(token, errorMessage, name, opts)
+        reportParsingProblem(token, errorMessage, name, opts, exception)
     }
     internal fun reportParsingProblem(
-            token: Token,
+            token: Token?,
             message: String,
             commandName: String,
             opts: List<AbstractCommandLineOption<*>>,
@@ -69,15 +69,16 @@ class ParseErrorReporter(val programNamePrefix: String, val tokens: List<Token>)
         val tokens = tokens.dropLastWhile { it is SuperTokenSeparator }
         val commandLine = programNamePrefix + " " + tokens.joinToString(separator = "") { it.text }
 
-        val superposition = (" ".repeat(programNamePrefix.length + 1 - "at:".length + token.location.start)
-                + "~".repeat(token.text.length)
-//                + " ".repeat(commandLine.length - token.location.endInclusive))
-        )
+        val AT = "at:"
+        val superposition = if(token != null)
+                " ".repeat(programNamePrefix.length + 1 - AT.length + token.location.start) +
+                "~".repeat(token.text.length.coerceAtLeast(1))
+        else null
 
         val rendered =
                 """$message
                   |$commandLine
-                  |at:$superposition
+                  |${if(token != null) "$AT$superposition" else ""}
                   |
                   |${exception ?: ""}
                   """.trimMargin().trim()
@@ -123,18 +124,22 @@ class ParseFailedException private constructor(message: String, cause: Exception
     companion object {
         operator fun invoke(failure: ParseFailure): ParseFailedException {
 
-            val newlineSeparatedMessages = failure.parseProblems.joinToString("\n\n") { it.message + "\n\n" + it.usage }
+            val newlineSeparatedMessages = failure.parseProblems
+                    .groupBy { it.usage }.entries
+                    .joinToString { (usage, parseProblems) ->
+                        parseProblems.joinToString("\n\n", postfix = "\n\n") { it.message } + usage
+                    }
             val message = """Failure in parsing command line:
                 |
                 |$newlineSeparatedMessages
                 """.trimMargin()
 
-            val exceptions = failure.parseProblems.map { it.stackTrace }
+            val exceptions = failure.parseProblems.map { it.stackTrace }.filter { it != null }
             val cause = exceptions.firstOrNull()
             val suppressed = exceptions.drop(1)
 
             return ParseFailedException(message, cause).apply {
-                suppressed.forEach { cause!!.addSuppressed(it) }
+                suppressed.forEach { cause ?.addSuppressed(it) }
             }
         }
     }
@@ -146,24 +151,5 @@ class HelpException private constructor(message: String) : RuntimeException(mess
                 HelpException(failure.helpMessages.joinToString("\n\n") { it.usage })
     }
 }
-
-class MissingOptionsException private constructor(message: String): RuntimeException(message){
-    companion object {
-        operator fun invoke(failure: MissingOptions): MissingOptionsException {
-            val options = failure.missingOptions
-                    .map { it as AbstractCommandLineOption }
-                    .joinToString("', '", "'", "'") { it.longName }
-
-            val message = """Missing required options: $options
-                |${failure.helpMessage}
-                """.trimMargin()
-
-            return MissingOptionsException(message)
-        }
-    }
-}
-
-private class ConfigurationExceptionCause: RuntimeException("Configuration Exception")
-private class ParseExceptionCause: RuntimeException("Parse Exception")
 
 interface ErrorReporting { val errorReporter: ParseErrorReporter }

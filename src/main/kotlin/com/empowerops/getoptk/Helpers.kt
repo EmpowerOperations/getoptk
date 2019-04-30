@@ -3,6 +3,7 @@ package com.empowerops.getoptk
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
+import kotlin.reflect.KVisibility
 
 
 //region provideDelegate
@@ -75,3 +76,17 @@ internal fun makeHelpOption(otherOptions: List<AbstractCommandLineOption<*>>) = 
     isRequired = false
 })
 
+fun <T: Any> KClass<T>.newInstance(): T {
+
+    val emptyConstructors = constructors
+            .filter { it.parameters.isEmpty() }.takeUnless { it.isEmpty() }
+            ?: throw InstantiationException("no default constructor for $qualifiedName")
+
+    val accessibleEmptyConstructors = emptyConstructors
+            .filter { it.visibility == KVisibility.PUBLIC }.takeUnless { it.isEmpty() }
+            ?: throw InstantiationException("default constructor not public for $qualifiedName")
+
+    val constructor = accessibleEmptyConstructors.single()
+
+    return constructor.call()
+}

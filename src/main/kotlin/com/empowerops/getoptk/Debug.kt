@@ -1,3 +1,3 @@
 package com.empowerops.getoptk
 
-internal val debug: Boolean = true
+internal val debug: Boolean = false

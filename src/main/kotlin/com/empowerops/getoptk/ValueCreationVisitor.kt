@@ -4,42 +4,40 @@ import java.util.*
 import kotlin.reflect.full.cast
 
 internal class ValueCreationVisitor(
-        val allOptions: List<AbstractCommandLineOption<*>>,
-        val errorReporter: ParseErrorReporter,
-        rootCommandName: String,
-        rootOpts: List<AbstractCommandLineOption<*>>
+        val errorReporter: ParseErrorReporter
 ) {
 
-    var unconsumedOptions: List<AbstractCommandLineOption<*>> = allOptions
-        private set
-
-    private val commandName: Deque<String> = LinkedList()
-    private val commandOpts: Deque<List<AbstractCommandLineOption<*>>> = LinkedList()
+    val unconsumedOptions: Deque<MutableList<AbstractCommandLineOption<*>>> = LinkedList()
 
     fun visitEnter(cliNode: CLINode) {
-        val baseName = if(commandName.any()) "${commandName.peek()} " else ""
-        commandName.push("$baseName${cliNode.commandName}")
-        commandOpts.push(cliNode.opts)
+        errorReporter.enterScope(cliNode.commandName, cliNode.opts)
+
+        unconsumedOptions.push(cliNode.opts.toMutableList())
     }
+
     fun visitLeave(cliNode: CLINode) {
-        val config = cliNode.config ?: return
 
-        unconsumedOptions -= config
+        val config = cliNode.config?.let { subCommand ->
+            unconsumedOptions.peek() -= subCommand as AbstractCommandLineOption<*>
+            val instance: Any? = subCommand.optionType.cast(subCommand.resolvedCommand)
+            subCommand._value = Value(instance) as ValueStrategy<Nothing>
+        }
 
-        val instance: Any? = config.optionType.cast(config.resolvedCommand)
-        config._value = Value(instance) as ValueStrategy<Nothing>
-
-        commandOpts.pop()
-        commandName.pop()
+        val missingOptions = unconsumedOptions.peek().filter { it.isRequired }
+        for(missingOption in missingOptions){
+            val message = "No value for required option '${missingOption.toPropertyDescriptor()}'"
+            errorReporter.reportParsingProblem(cliNode.lastToken, message)
+        }
+        errorReporter.exitScope()
     }
 
     fun visitEnter(optionNode: BooleanOptionNode) {}
     fun visitLeave(optionNode: BooleanOptionNode) {
         val config = optionNode.config ?: return
-        unconsumedOptions -= config
+        unconsumedOptions.peek() -= config
 
         if(config.isHelp){
-            errorReporter.printUsage(commandName.peek(), commandOpts.peek())
+            errorReporter.printUsage()
         }
 
         config._value = when(config.interpretation){
@@ -51,12 +49,13 @@ internal class ValueCreationVisitor(
     fun visitEnter(optionNode: ValueOptionNode) {}
     fun visitLeave(optionNode: ValueOptionNode) {
         val config = optionNode.config ?: return
-        unconsumedOptions -= (config as AbstractCommandLineOption<*>)
+        val configAsAbstract = config as AbstractCommandLineOption<*>
+        unconsumedOptions.peek() -= configAsAbstract
         
         val argumentNode = optionNode.argumentNode.children.single() as? ArgumentNode ?: return
 
         val argToken = argumentNode.valueToken
-        val converted = config.converter.tryConvert(config, argToken)
+        val converted = config.converter.tryConvert(configAsAbstract, argToken)
 
         config._value = Value(converted)
     }
@@ -64,12 +63,13 @@ internal class ValueCreationVisitor(
     fun visitEnter(optionNode: ObjectOptionNode) {}
     fun visitLeave(optionNode: ObjectOptionNode) {
         val config = optionNode.config ?: return
-        unconsumedOptions -= (config as AbstractCommandLineOption<*>)
+        val configAsAbstract = config as AbstractCommandLineOption<*>
+        unconsumedOptions.peek() -= configAsAbstract
 
         val argumentNodes = optionNode.arguments.children.filterIsInstance<ArgumentNode>()
 
         val factory = config.factoryOrErrors as UnrolledAndUntypedFactory<*>
-        val converted = factory.tryMake(config, argumentNodes.map { it.valueToken })
+        val converted = factory.tryMake(configAsAbstract, argumentNodes.map { it.valueToken })
 
         config._value = Value(converted)
     }
@@ -77,7 +77,8 @@ internal class ValueCreationVisitor(
     fun visitEnter(optionNode: ListOptionNode) {}
     fun visitLeave(optionNode: ListOptionNode) {
         val config = optionNode.config ?: return
-        unconsumedOptions -= (config as AbstractCommandLineOption<*>)
+        val configAsAbstract = config as AbstractCommandLineOption<*>
+        unconsumedOptions.peek() -= configAsAbstract
         
         val parseMode = config.parseMode
         val argumentTokens = optionNode.arguments.children.filterIsInstance<ArgumentNode>().map { it.valueToken }
@@ -112,7 +113,7 @@ internal class ValueCreationVisitor(
     fun visitEnter(errorNode: ErrorNode) {}
     fun visitLeave(errorNode: ErrorNode) {}
 
-    private fun reportError(token: Token, exception: Exception, config: AbstractCommandLineOption<*>){
+    private fun reportError(token: Token?, exception: Exception?, config: AbstractCommandLineOption<*>){
 
         // I really cant stand the idea of catching debugging-oriented errors,
         // so I'm going to throw them immediately.
@@ -121,7 +122,7 @@ internal class ValueCreationVisitor(
         }
         else {
             val message = "Failed to parse value" + if (config != null) " for "+config.toPropertyDescriptor() else ""
-            errorReporter.reportParsingProblem(token, message, commandName.peek(), listOf(config), exception)
+            errorReporter.reportParsingProblem(token, message, exception = exception)
         }
     }
     

@@ -29,7 +29,7 @@ class ObjectSemanticsFixture {
     }
 
     @Test fun `when calling toString on instance should produce reasonable toString`(){
-        val instance = CLI.parse("prog", listOf("--first", "4.2", "-c", "bob", "27")) { TypicalCLI() }
+        val instance = (CLI.parse("prog", listOf("--first", "4.2", "-c", "bob", "27")) { TypicalCLI() } as Success<TypicalCLI>).result
 
         //act
         val result = instance.toString()

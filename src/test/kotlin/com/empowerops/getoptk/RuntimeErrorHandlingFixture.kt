@@ -20,14 +20,21 @@ class RuntimeErrorHandlingFixture {
         val args = emptyArray<String>()
 
         //act
-        val ex = assertThrows<MissingOptionsException> { args.parsedAs("prog.exe") { Thingy() } }
+        val ex = assertThrows<ParseFailedException> { args.parsedAs("prog.exe") { Thingy() } }
 
         //assert
-        assertThat(ex.message!!.trimLineEnds()).isEqualTo("""Missing required options: 'required'
-                |usage: prog.exe
-                | -r,--required <int>
-                | -n,--notRequired <int>
-                """.trimMargin()
+        assertThat(ex.message!!.trimLineEnds()).isEqualTo("""
+            Failure in parsing command line:
+
+            No value for required option 'val required: Int by getOpt()'
+            prog.exe
+            at:      ~
+
+            usage: prog.exe
+             -r,--required <int>
+             -n,--notRequired <int>
+             -h,--help
+            """.trimIndent()
         )
     }
 
@@ -65,6 +72,7 @@ class RuntimeErrorHandlingFixture {
                   |
                   |usage: prog
                   | -e,--eh <value>
+                  | -h,--help
                   """.trimMargin()
         )
         assertThat(ex.cause).isInstanceOf(NumberFormatException::class.java)
@@ -85,17 +93,21 @@ class RuntimeErrorHandlingFixture {
         val ex = assertThrows<ParseFailedException> { args.parsedAs("prog") { ValueOfAbleCLI() } }
 
         //assert
-        assertThat(ex.message!!.trimLineEnds()).isEqualTo(
-                """Failure in parsing command line:
-                  |
-                  |unknown option 'name', expected 'parsable', 'help'
-                  |prog --name bob
-                  |at:    ~~~~
-                  |
-                  |usage: prog
-                  | -p,--parsable <value>
-                  | -h,--help
-                  """.trimMargin()
+        assertThat(ex.message!!.trimLineEnds()).isEqualTo("""
+            Failure in parsing command line:
+
+            unknown option 'name', expected 'parsable', 'help'
+            prog --name bob
+            at:    ~~~~
+
+            No value for required option 'val parsable: ValueOfAble by getValueOpt()'
+            prog --name bob
+            at:            ~
+
+            usage: prog
+             -p,--parsable <value>
+             -h,--help
+             """.trimIndent()
         )
     }
     class ValueOfAbleCLI : CLI(){
@@ -126,6 +138,7 @@ class RuntimeErrorHandlingFixture {
                   |
                   |usage: prog
                   | -p,--problem <value>
+                  | -h,--help
                   """.trimMargin()
         )
         assertThat(ex.cause).isInstanceOf(UnsupportedOperationException::class.java)
@@ -145,12 +158,28 @@ class RuntimeErrorHandlingFixture {
         val args = arrayOf("--req1", "val1")
 
         //act
-        val ex = assertThrows<MissingOptionsException> { args.parsedAs("prog") { TwoRequiredFieldCLI() } }
+        val ex = assertThrows<ParseFailedException> { args.parsedAs("prog") { TwoRequiredFieldCLI() } }
 
         //assert
-        assertThat(ex)
-                .isInstanceOf2<MissingOptionsException>()
-                .hasMessageContaining("Missing required options: 'req2', 'req3'")
+        assertThat(ex).isInstanceOf2<ParseFailedException>()
+        assertThat(ex.message!!.trimLineEnds()).isEqualTo("""
+            Failure in parsing command line:
+
+            No value for required option 'val req2: String by getValueOpt()'
+            prog --req1 val1
+            at:             ~
+
+            No value for required option 'val req3: String by getValueOpt()'
+            prog --req1 val1
+            at:             ~
+
+            usage: prog
+             -r,--req1 <value>
+             -r2,--req2 <value>
+             -r3,--req3 <value>
+             -h,--help
+             """.trimIndent()
+        )
     }
     class TwoRequiredFieldCLI: CLI(){
         val req1: String by getValueOpt()

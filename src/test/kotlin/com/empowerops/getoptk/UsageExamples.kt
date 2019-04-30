@@ -141,7 +141,11 @@ class UsageExamples {
         val args = arrayOf("--thingyParent", "bob", "1.234", "2")
 
         //act
-        val instance = args.parsedAs("prog") { TreeHolder() }
+        val result = args.tryParsedAs<TreeHolder>("prog")
+        val instance = when(result){
+            is Success -> result.result
+            else -> throw Exception("expected success but got $result")
+        }
 
         //assert
         assertThat(instance.thingyParent).isEqualTo(ThingyParent(Thingy("bob", 1.234), 2))
@@ -191,13 +195,13 @@ class UsageExamples {
 
     @Test fun `when parsing type with valueOf method`(){
         //setup
-        val args = arrayOf("--name", "bob")
+        val args = listOf("--name", "bob")
 
         //act
-        val instance = args.parsedAs("prog") { ValueOfAbleCLI() }
+        val instance = args.tryParsedAs<ValueOfAbleCLI>("prog")
 
         //assert
-        assertThat(instance.name).isEqualTo(ValueOfAble("bob_thingy"))
+        assertThat((instance as Success<ValueOfAbleCLI>).result.name).isEqualTo(ValueOfAble("bob_thingy"))
     }
     class ValueOfAbleCLI : CLI(){
         val name: ValueOfAble by getValueOpt()
@@ -250,7 +254,7 @@ class UsageExamples {
         val args = arrayOf("--beta", "XL")
 
         //act
-        val instance = args.parsedAs("prog") { DemoUseCaseCLI() }
+        val instance = args.parsedAs<DemoUseCaseCLI>("prog")
 
         //assert
         assertThat(instance.betaFactor).isEqualTo(4)
@@ -307,7 +311,7 @@ class UsageExamples {
         val args = emptyArray<String>()
 
         //act
-        val result = args.parsedAs("prog") { NonDefaultedCLI() }
+        val result = args.parsedAs<NonDefaultedCLI>("prog")
 
         //assert
         assertThat(result.nonnullable).isEqualTo(SimpleDTO(0, 0.0))
@@ -320,7 +324,7 @@ class UsageExamples {
     }
 
     @Test fun `when using git like component with sub commands should properly parse`(){
-        val args = arrayOf("lfs", "--initialize")
+        val args = listOf("lfs", "--initialize")
 
         val command: GitCLI = args.parsedAs("git") { GitCLI() }
 

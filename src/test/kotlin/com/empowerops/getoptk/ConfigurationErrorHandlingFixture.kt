@@ -28,13 +28,13 @@ class ConfigurationErrorHandlingFixture {
         val args = arrayOf("")
 
         //act
-        val ex = assertThrows<ConfigurationException> { args.parsedAs("prog") { ExplosiveCLI() } }
+        val ex = assertThrows<ConfigurationException> { args.parsedAs<ExplosiveCLI>("prog") }
 
         //assert
         assertThat(ex).isInstanceOf2<ConfigurationException>()
         assertThat(ex.message).isEqualTo("""CLI configuration errors:
                 |  specification for 'first' threw java.lang.NumberFormatException: For input string: "twenty-three"
-                |  specification for 'second' threw java.lang.NumberFormatException: For input string: "33.4"
+                |  specification for 'second' threw java.lang.Exception: blam!!
                 """.trimMargin()
         )
     }
@@ -45,10 +45,24 @@ class ConfigurationErrorHandlingFixture {
         }
 
         val second: Int by getOpt {
-            default = "33.4".toInt()
+            default = throw Exception("blam!!")
         }
     }
 
+    @Test fun `when attempting to use class without default constructor should get good message`(){
+        val args = emptyArray<String>()
+
+        val result = args.tryParsedAs<UnfrinedlyCLIType>("prog")
+
+        val resultActual = result as ConfigurationFailure
+        assertThat(result.configurationProblems.map { it.message }).isEqualTo(listOf("Failed instantiate CLI instance"))
+    }
+
+    class UnfrinedlyCLIType: CLI {
+        constructor(someVar: String): super()
+
+        val first: Double by getOpt()
+    }
 }
 
 

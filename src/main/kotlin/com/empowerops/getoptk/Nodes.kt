@@ -52,7 +52,8 @@ internal data class CLINode(
         val commandName: String,
         override val children: List<ParseNode>,
         val config: SubcommandOptionConfigurationImpl<*>? = null,
-        val opts: List<AbstractCommandLineOption<*>>
+        val opts: List<AbstractCommandLineOption<*>>,
+        val lastToken: Token
 ): ParseNode()
 
 internal data class BooleanOptionNode(
@@ -95,7 +96,7 @@ internal data class ArgumentNode(
 internal object ErrorNode: ParseNode()
 
 internal fun ParseNode.accept(visitor: ValueCreationVisitor): Unit = when(this){
-    is CLINode ->       this.internalAccept(visitor, { visitEnter(it) }, { visitLeave(it) })
+    is CLINode ->           this.internalAccept(visitor, { visitEnter(it) }, { visitLeave(it) })
     is ValueOptionNode ->   this.internalAccept(visitor, { visitEnter(it) }, { visitLeave(it) })
     is ObjectOptionNode ->  this.internalAccept(visitor, { visitEnter(it) }, { visitLeave(it) })
     is ListOptionNode ->    this.internalAccept(visitor, { visitEnter(it) }, { visitLeave(it) })

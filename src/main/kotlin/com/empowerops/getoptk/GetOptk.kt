@@ -2,7 +2,6 @@ package com.empowerops.getoptk
 
 import org.stringtemplate.v4.Interpreter
 import org.stringtemplate.v4.ST
-import org.stringtemplate.v4.STGroup
 import org.stringtemplate.v4.STGroupFile
 import org.stringtemplate.v4.misc.ObjectModelAdaptor
 import kotlin.reflect.KClass
@@ -49,20 +48,16 @@ abstract class CLI {
 
         fun <T: CLI> parse(
                 programName: String,
-                args: Array<String>,
-                altHandler: (SpecialCaseInterpretation) -> Unit = ::throwSpecialCase,
-                hostFactory: () -> T
-        ): T
-                = parse(programName, args.asIterable(), altHandler, hostFactory)
-
-        fun <T: CLI> parse(
-                programName: String,
                 args: Iterable<String>,
-                altHandler: (SpecialCaseInterpretation) -> Unit = ::throwSpecialCase,
                 hostFactory: () -> T
-        ): T {
+        ): ParseResult<T> {
 
-            val cmd = hostFactory()
+            val cmd = try { hostFactory() }
+                    catch(ex: Exception) {
+                        return ConfigurationFailure(listOf(
+                                ConfigurationProblem("Failed instantiate CLI instance", ex)
+                        ))
+                    }
 
             var opts: List<AbstractCommandLineOption<*>> = cmd.optionProperties
 
@@ -73,7 +68,7 @@ abstract class CLI {
             val configErrors = cmd.errorReporter.configurationErrors
 
             if(configErrors.any()){
-                altHandler(ConfigurationFailure(configErrors))
+                return ConfigurationFailure(configErrors)
             }
 
             val tokens = Lexer.lex(args)
@@ -84,25 +79,19 @@ abstract class CLI {
 
             val root = parser.parseCLI(tokens, programName)
 
-            val visitor = ValueCreationVisitor(opts, parseErrorReporter, programName, opts)
+            val visitor = ValueCreationVisitor(parseErrorReporter)
             root.accept(visitor)
 
             if(parseErrorReporter.usages.any()){
-                altHandler(HelpRequested(parseErrorReporter.usages))
+                return HelpRequested(parseErrorReporter.usages)
             }
             if(parseErrorReporter.parsingProblems.any()){
-                altHandler(ParseFailure(parseErrorReporter.parsingProblems))
-            }
-
-            val requiredButNotSpecifiedOptions: List<AbstractCommandLineOption<*>> = visitor.unconsumedOptions.filter { it.isRequired }
-            if(requiredButNotSpecifiedOptions.any()){
-                TODO()
-//                altHandler(MissingOptions(requiredButNotSpecifiedOptions, cmd.makeHelpMessage(programName)))
+                return ParseFailure(parseErrorReporter.parsingProblems)
             }
 
             // uhh, if `altHandler` is a no-op, and we encounter all of the above errors,
             // are we sure this object is even consistent?
-            return cmd
+            return Success(cmd)
         }
 
         object OptionExtensionFunctionsAdapter: ObjectModelAdaptor(){
@@ -152,10 +141,29 @@ abstract class Subcommand: CLI() {
  * Parses the reciever string array (typically `args`) into the CLI instance
  * provided by calling the host factory
  */
-@Throws(ConfigurationException::class, ParseFailedException::class)
+inline fun <reified T: CLI> Array<String>.parsedAs(
+        programName: String,
+        noinline hostFactory: () -> T = T::class::newInstance
+): T
+        = CLI.parse(programName, this.asIterable(), hostFactory).let { throwSpecialCase(it).result }
 
-fun <T: CLI> Array<String>.parsedAs(programName: String, altHandler: (SpecialCaseInterpretation) -> Unit = ::throwSpecialCase, hostFactory: () -> T): T
-        = CLI.parse(programName, this.asIterable(), altHandler, hostFactory)
+inline fun <reified T: CLI> Iterable<String>.parsedAs(
+        programName: String,
+        noinline hostFactory: () -> T = T::class::newInstance
+): T
+        = CLI.parse(programName, this, hostFactory).let { throwSpecialCase(it).result }
+
+inline fun <reified T: CLI> Array<String>.tryParsedAs(
+        programName: String,
+        noinline hostFactory: () -> T = T::class::newInstance
+): ParseResult<T>
+        = CLI.parse(programName, this.asIterable(), hostFactory)
+
+inline fun <reified T: CLI> Iterable<String>.tryParsedAs(
+        programName: String,
+        noinline hostFactory: () -> T = T::class::newInstance
+): ParseResult<T>
+        = CLI.parse(programName, this, hostFactory)
 
 /**
  * Defines a value option type from the command line.
@@ -217,17 +225,18 @@ fun <T: Subcommand> getSubcommandOpt(cli: CLI, spec: SubcommandOptionConfigurati
     return SubcommandOptionConfigurationImpl(cli, objectType, spec)
 }
 
-sealed class SpecialCaseInterpretation
+sealed class ParseResult<out T: CLI>
+sealed class SpecialCaseInterpretation: ParseResult<Nothing>()
 data class ConfigurationFailure(val configurationProblems: List<ConfigurationProblem>) : SpecialCaseInterpretation()
 data class ParseFailure(val parseProblems: List<ParseProblem>) : SpecialCaseInterpretation()
 data class HelpRequested(val helpMessages: List<UsageRequest>) : SpecialCaseInterpretation()
-data class MissingOptions(val missingOptions: List<CommandLineOption<*>>, val helpMessage: String): SpecialCaseInterpretation()
+data class Success<T: CLI>(val result: T): ParseResult<T>()
 
-fun throwSpecialCase(specialCase: SpecialCaseInterpretation): Nothing = when(specialCase){
+fun <T: CLI> throwSpecialCase(specialCase: ParseResult<T>): Success<T> = when(specialCase){
     is ConfigurationFailure -> throw ConfigurationException(specialCase)
     is ParseFailure -> throw ParseFailedException(specialCase)
     is HelpRequested -> throw HelpException(specialCase)
-    is MissingOptions -> throw MissingOptionsException(specialCase)
+    is Success -> specialCase
 }
 
 internal fun makeHelpMessage(programName: String, optionProperties: List<AbstractCommandLineOption<*>>): String {

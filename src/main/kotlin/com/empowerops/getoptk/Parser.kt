@@ -83,7 +83,7 @@ internal class Parser(
             if(newChild !is CLINode) expect<SuperTokenSeparator>()
         }
 
-        return@analyzing CLINode(commandName, children, subcommandConfig, optConfigs)
+        return@analyzing CLINode(commandName, children, subcommandConfig, optConfigs, previous())
     }
 
     /** as per [Parser]:

@@ -12,7 +12,7 @@ class HelpOptionFixture {
     val ` ` = " "
 
     @Test fun `when asking for --help on simple class should produce good message by default`(){
-        val ex = assertThrows<HelpException> { arrayOf("--help").parsedAs("prog.exe") { SimpleHelpableOptionSet() } }
+        val ex = assertThrows<HelpException> { arrayOf("--help").parsedAs<SimpleHelpableOptionSet>("prog.exe") }
         
         //TBD: how do we specify what to do with outputs?
         // more importantly, if we dont use exception flow then we need a valid instance of the object
