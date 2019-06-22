@@ -1,13 +1,7 @@
-# Gradle
 .gradle
 build/
+out/
 gradle-app.setting
-
-# Kobalt
-local.properties
-.kobalt
-kobaltBuild
-kobalt/out/classes/
 
 # Avoid ignoring Gradle wrapper jar file (.jar files are usually ignored)
 !gradle-wrapper.jar
@@ -15,23 +9,7 @@ kobalt/out/classes/
 # Cache of project
 .gradletasknamecache
 
-# # Work around https://youtrack.jetbrains.com/issue/IDEA-116898
+# Work around https://youtrack.jetbrains.com/issue/IDEA-116898
 # gradle/wrapper/gradle-wrapper.properties
 
-# Intellij project files
-# @see http://devnet.jetbrains.com/docs/DOC-1186
-.idea/workspace.xml
-.idea/tasks.xml
-.idea/misc.xml
-.idea/dataSources.ids
-.idea/dataSources.xml
-.idea/dataSources.local.xml
-.idea/sqlDataSources.xml
-.idea/dynamic.xml
-.idea/uiDesigner.xml
-.idea/gradle.xml
-.idea/libraries
-.idea/dictionaries/
-.idea/kobalt.xml
-kobalt/Build.kt.iml
-kobalt/wrapper/kobalt-wrapper.properties
+.idea/
