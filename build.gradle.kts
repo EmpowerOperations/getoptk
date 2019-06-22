@@ -1,8 +1,10 @@
 plugins {
     kotlin("jvm") version "1.3.40"
 }
-group = "groostav"
+
+group = "com.empowerops"
 version = "0.3"
+
 dependencies {
     implementation(kotlin("stdlib"))
     implementation(kotlin("reflect"))
@@ -14,6 +16,7 @@ dependencies {
     testImplementation("org.assertj:assertj-core:3.5.2")
     testImplementation("org.jetbrains.kotlin:kotlin-test:1.3.40")
 }
+
 repositories {
     mavenCentral()
 }
